@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel de Pacientes</title>
+<style>
+:root{--bg:#f6f1ea;--card:#fffdf9;--ink:#4a3728;--mut:#8a7767;--terra:#b9694a;--sage:#7f9170;--sand:#e8dcca;--line:#eadfd0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Georgia,'Times New Roman',serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.w{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+h1{font-size:24px;margin:0;font-weight:500}h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:28px 0 10px;font-family:system-ui,sans-serif}
+.sans,button,input,select,textarea,.b{font-family:system-ui,sans-serif}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px}
+.btn:hover{background:var(--sand)}.pri{background:var(--terra);color:#fff;border-color:var(--terra)}.pri:hover{background:#a55a3d}
+.tabs{display:flex;gap:6px}.tabs .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.k{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 1px 3px #4a372810;text-align:left}
+.k:hover{border-color:var(--terra)}.k b{display:block;font-size:28px;font-weight:500;font-family:Georgia,serif}.k span{font-size:12px;color:var(--mut)}
+.k.hot b{color:var(--terra)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 3px #4a372808}
+.row .n{font-weight:600;cursor:pointer;min-width:130px;flex:1}.row .n:hover{color:var(--terra)}
+.row .d{flex:3;min-width:200px;font-size:13px;color:var(--mut)}.row .d strong{color:var(--ink);font-weight:600}
+.row .a{display:flex;gap:6px;flex-wrap:wrap}
+.b{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11px;background:var(--sand)}
+.b.late{background:#f1d5c9;color:#8f3f22}.b.sched{background:#f4e6c8;color:#7a5a16}.b.ok{background:#dfe6d6;color:#4d5f3f}
+.pl{display:grid;grid-template-columns:1.4fr .9fr .7fr .5fr 2fr .9fr .8fr auto;gap:10px;align-items:center}
+.pl.h{font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:0 14px;margin-bottom:6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}.chips .btn{padding:5px 12px;border-radius:20px}.chips .on{background:var(--sage);color:#fff;border-color:var(--sage)}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}
+#q{max-width:340px}
+.ov{position:fixed;inset:0;background:#4a372888;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 12px;z-index:5}
+.md{background:var(--bg);border-radius:18px;max-width:620px;width:100%;padding:22px}
+.md label{display:block;font:600 12px system-ui;color:var(--mut);margin:12px 0 4px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cs{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.ln{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+#t{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font:13px system-ui;opacity:0;transition:.25s;z-index:9;pointer-events:none}
+#t.s{opacity:1}#t.err{background:#8f3f22}
+.empty{color:var(--mut);padding:14px;font-style:italic}
+@media(max-width:760px){.pl.h{display:none}.pl{grid-template-columns:1fr 1fr}.pl>*:nth-child(5){grid-column:1/3}}
+</style></head><body><div class="w">
+<header><div><h1>Painel de Pacientes</h1><div class="sans" style="font-size:12px;color:var(--mut)" id="sync"></div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><div class="tabs"><button class="btn on" id="t1" onclick="tab(1)">Painel</button><button class="btn" id="t2" onclick="tab(2)">Pacientes</button></div>
+<button class="btn" onclick="cfg()">⚙︎</button><button class="btn pri" onclick="abrirForm()">+ Novo paciente</button></div></header>
+<div id="v"></div></div>
+<div id="m"></div><div id="t"></div>
+<script>
+const $=s=>document.querySelector(s),T=(()=>{const d=new Date();return f(d)})();
+function f(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+const D=s=>new Date(s+'T12:00:00'),add=(s,n)=>{const d=D(s);d.setDate(d.getDate()+n);return f(d)},diff=(a,b)=>Math.round((D(a)-D(b))/864e5);
+const br=s=>s?s.split('-').reverse().join('/'):'—',uid=()=>Math.random().toString(36).slice(2,10),esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let db=[],view=1,flt='todos',qs='';
+const ST=['Não agendado','Agendado','Realizado','Não vai retornar','Pausado','Alta'],PS=['Ativo','Pausado','Alta','Não vai retornar'];
+const FL={todos:'Todos',acao:'Precisa de ação',sched:'Retorno próximo',late:'Retorno atrasado',msg:'Mensagem 15 dias',chk:'Check-in 30 dias',agend:'Agendados',plano:'Plano',glp:'GLP-1',pausado:'Pausados',ativos:'Ativos',up:'Próximos'};
+function toast(m,e){const t=$('#t');t.textContent=m;t.className='s'+(e?' err':'');clearTimeout(t.h);t.h=setTimeout(()=>t.className='',2600)}
+// ---- armazenamento (Google Sheets via Apps Script)
+let API=localStorage.getItem('api')||'';
+function cache(){localStorage.setItem('db',JSON.stringify(db))}
+async function post(b){cache();if(!API){toast('Salvo só neste aparelho — configure ⚙︎ para sincronizar','err');return}
+ try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(b)});await r.json();toast(b.action=='del'?'Excluído ✓':'Salvo e sincronizado ✓')}
+ catch(e){toast('Salvo só neste aparelho — falha ao sincronizar','err')}}
+const save=p=>post({action:'save',patient:p});
+function load(){db=JSON.parse(localStorage.getItem('db')||'[]');$('#sync').textContent=API?'Sincronizado com Google Sheets':'Modo local — configure ⚙︎ para sincronizar';render();
+ if(API)fetch(API).then(r=>r.json()).then(r=>{db=r;cache();render()}).catch(()=>toast('Sem conexão com a planilha','err'))}
+function cfg(){const u=prompt('Cole a URL do Apps Script (Aplicativo da Web). Deixe vazio para modo local:',API);if(u===null)return;API=u.trim();localStorage.setItem('api',API);load()}
+// ---- regras
+const fu=(c,k)=>(c.fu&&c.fu[k])||{st:'Não agendado'};
+function E(p,c,kind,due,k){const days=diff(due,T);let b,l;
+ if(kind=='fu'){b=days<0?'late':days<=30?'sched':days<=60?'up':'far';l=days<0?`Retorno atrasado — não agendado`:days<=30?'Agendar retorno':'Retorno'+(c.tipo=='Plano'?' de '+k+' dias':'')+' ainda não agendado'}
+ else{b=days<=0?kind:days<=30?'up':'far';l=(kind=='msg'?'Mensagem de 15 dias':'Check-in de 30 dias')+(days<=0?' pendente':'')}
+ return{p,c,kind,due,days,b,l,k,r:{late:0,sched:1,msg:2,chk:3,up:4,far:5}[b]}}
+function evs(p){const o=[];if(p.status!='Ativo')return o;
+ p.consults.forEach(c=>{if(c.entrega&&!c.msg)o.push(E(p,c,'msg',add(c.entrega,15)));if(!c.chk)o.push(E(p,c,'chk',add(c.date,30)));
+  (c.tipo=='Plano'?[60,90,120]:[60]).forEach(k=>{if(fu(c,k).st=='Não agendado')o.push(E(p,c,'fu',add(c.date,k),k))})});
+ return o.sort((a,b)=>a.r-b.r||a.due.localeCompare(b.due))}
+const last=p=>[...p.consults].sort((a,b)=>b.date.localeCompare(a.date))[0]||{};
+const nxt=p=>[...evs(p)].sort((a,b)=>a.due.localeCompare(b.due))[0];
+const agd=p=>p.consults.some(c=>Object.values(c.fu||{}).some(x=>x.st=='Agendado'));
+function match(p,k){const e=evs(p),h=b=>e.some(x=>x.b==b);const l=last(p);
+ return{todos:1,acao:h('late')||h('sched')||h('msg')||h('chk'),sched:h('sched'),late:h('late'),msg:h('msg'),chk:h('chk'),agend:agd(p),plano:p.status=='Ativo'&&l.tipo=='Plano',glp:p.status=='Ativo'&&l.glp=='Sim',pausado:p.status=='Pausado',ativos:p.status=='Ativo',up:h('up')}[k]}
+// ---- ações
+function P(id){return db.find(p=>p.id==id)}function C(p,id){return p.consults.find(c=>c.id==id)}
+function tog(pid,cid,f){const p=P(pid),c=C(p,cid);c[f]=!c[f];save(p);render();hist(pid,1)}
+function quick(pid,cid,f){const p=P(pid);C(p,cid)[f]=true;save(p);render()}
+function sch(pid,cid,k){const p=P(pid),c=C(p,cid),x=fu(c,k);
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h2 style="margin-top:0">Retorno de ${k} dias — ${esc(p.nome)}</h2><label>Status</label><select id="s1">${ST.map(s=>`<option ${s==x.st?'selected':''}>${s}</option>`).join('')}</select><label>Data da consulta (se agendado)</label><input type="date" id="s2" value="${x.date||add(c.date,k)}"><div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="doSch('${pid}','${cid}',${k})">Salvar</button></div></div></div>`}
+function doSch(pid,cid,k){const p=P(pid),c=C(p,cid),st=$('#s1').value,d=$('#s2').value;
+ if(st=='Agendado'&&!d)return toast('Informe a data','err');
+ c.fu=c.fu||{};c.fu[k]={st,date:st=='Agendado'?d:''};if(st=='Agendado')c.proxima=d;save(p);cl();render()}
+const cl=()=>$('#m').innerHTML='';
+function del(pid){if(!confirm('Excluir este paciente e todo o histórico? Não dá para desfazer.'))return;db=db.filter(p=>p.id!=pid);post({action:'del',id:pid});cl();render()}
+function delC(pid,cid){if(!confirm('Excluir esta consulta?'))return;const p=P(pid);p.consults=p.consults.filter(c=>c.id!=cid);save(p);render();hist(pid)}
+// ---- formulário
+function abrirForm(pid,cid){const p=pid?P(pid):null,c=cid?C(p,cid):{},ed=!p||cid;
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h2 style="margin-top:0">${!p?'Novo paciente':cid?'Editar consulta':'Nova consulta — '+esc(p.nome)}</h2>
+ ${ed?`<label>Nome</label><input id="f1" value="${esc(p?p.nome:'')}"><label>Status do paciente</label><select id="f2">${PS.map(s=>`<option ${p&&p.status==s?'selected':''}>${s}</option>`).join('')}</select>`:''}
+ <div class="g2"><div><label>Data da consulta</label><input type="date" id="f3" value="${c.date||T}" onchange="if(!$('#f5').dataset.u)$('#f5').value=this.value"></div>
+ <div><label>Tipo</label><select id="f4">${['Avulsa','Retorno','Plano'].map(s=>`<option ${c.tipo==s?'selected':''}>${s}</option>`).join('')}</select></div>
+ <div><label>Data de entrega do plano</label><input type="date" id="f5" value="${c.entrega||(cid?'':T)}" oninput="this.dataset.u=1"></div>
+ <div><label>Em tratamento com GLP-1?</label><select id="f6"><option>Não</option><option ${c.glp=='Sim'?'selected':''}>Sim</option></select></div></div>
+ <label>Próxima consulta agendada (opcional)</label><input type="date" id="f7" value="${c.proxima||''}">
+ <label>Observações</label><textarea id="f8" rows="3">${esc(c.obs)}</textarea>
+ <div class="sans" style="font-size:12px;color:var(--mut);margin-top:8px">Mensagem de 15 dias, check-in de 30 dias e retornos são calculados automaticamente.</div>
+ <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="sv('${pid||''}','${cid||''}')">Salvar</button></div></div></div>`}
+function sv(pid,cid){const nome=$('#f1')?$('#f1').value.trim():'';if($('#f1')&&!nome)return toast('Informe o nome','err');
+ let p=pid?P(pid):{id:uid(),nome,status:'Ativo',consults:[]};if(!pid)db.push(p);
+ if($('#f1')){p.nome=nome;p.status=$('#f2').value}
+ let c=cid?C(p,cid):{id:uid(),msg:false,chk:false,fu:{}};if(!cid)p.consults.push(c);
+ Object.assign(c,{date:$('#f3').value,tipo:$('#f4').value,entrega:$('#f5').value,glp:$('#f6').value,proxima:$('#f7').value,obs:$('#f8').value});
+ if(!c.date)return toast('Informe a data da consulta','err');
+ if(c.proxima){const ks=c.tipo=='Plano'?[60,90,120]:[60],k=ks.find(k=>fu(c,k).st=='Não agendado');if(k){c.fu=c.fu||{};c.fu[k]={st:'Agendado',date:c.proxima}}}
+ save(p);cl();render()}
+// ---- histórico
+function hist(pid,keep){const p=P(pid);if(!p)return;const cs=[...p.consults].sort((a,b)=>b.date.localeCompare(a.date));
+ const pend=(ok,t)=>`<span class="b ${ok?'ok':'sched'}">${ok?t[0]:t[1]}</span>`;
+ $('#m').innerHTML=`<div class="ov"><div class="md"><div style="display:flex;justify-content:space-between;align-items:start"><div><h1>${esc(p.nome)}</h1><span class="b">${p.status}</span></div><button class="btn" onclick="cl()">✕</button></div>
+ <div style="margin:12px 0;display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri" onclick="abrirForm('${pid}')">+ Nova consulta</button><button class="btn" onclick="abrirForm('${pid}','${last(p).id}')">Editar</button><button class="btn" onclick="del('${pid}')">Excluir paciente</button></div>
+ ${cs.map(c=>`<div class="cs"><div style="display:flex;justify-content:space-between;gap:8px"><div><strong>Consulta: ${br(c.date)}</strong><div class="sans" style="font-size:12px;color:var(--mut)">Tipo: ${c.tipo} · GLP-1: ${c.glp}</div></div><div><button class="btn" onclick="abrirForm('${pid}','${c.id}')">Editar</button> <button class="btn" onclick="delC('${pid}','${c.id}')">🗑</button></div></div>
+ ${c.obs?`<div class="sans" style="font-size:13px;margin:6px 0">${esc(c.obs)}</div>`:''}
+ <div class="ln"><span>Plano entregue: ${br(c.entrega)}</span></div>
+ ${c.entrega?`<div class="ln"><span>Mensagem 15 dias: ${br(add(c.entrega,15))} ${pend(c.msg,['Enviada','Pendente'])}</span><button class="btn" onclick="tog('${pid}','${c.id}','msg')">${c.msg?'Desfazer':'✓ Enviada'}</button></div>`:''}
+ <div class="ln"><span>Check-in 30 dias: ${br(add(c.date,30))} ${pend(c.chk,['Realizado','Pendente'])}</span><button class="btn" onclick="tog('${pid}','${c.id}','chk')">${c.chk?'Desfazer':'✓ Realizado'}</button></div>
+ ${(c.tipo=='Plano'?[60,90,120]:[60]).map(k=>{const x=fu(c,k);return`<div class="ln"><span>${k} dias: ${br(add(c.date,k))} — ${x.st}${x.date?' em '+br(x.date):''}</span><button class="btn" onclick="sch('${pid}','${c.id}',${k})">Status / agendar</button></div>`}).join('')}</div>`).join('')}</div></div>`}
+// ---- renderização
+function ev(e){const a=e.kind=='fu'?`<button class="btn pri" onclick="sch('${e.p.id}','${e.c.id}',${e.k})">Agendar</button><button class="btn" onclick="sch('${e.p.id}','${e.c.id}',${e.k})">Alterar status</button>`:`<button class="btn pri" onclick="quick('${e.p.id}','${e.c.id}','${e.kind}')">${e.kind=='msg'?'Marcar como enviada':'Marcar check-in realizado'}</button>`;
+ const t=e.days<0?`há ${-e.days} dias`:e.days==0?'hoje':`em ${e.days} dias`;
+ return`<div class="row"><div class="n" onclick="hist('${e.p.id}')">${esc(e.p.nome)}</div><div class="d"><strong>${e.l}</strong><br>Prazo ${br(e.due)} (${t})${e.p.consults.length>1?' · consulta de '+br(e.c.date):''}</div><span class="b ${e.b=='late'?'late':e.b=='sched'?'sched':''}">${{late:'Atrasado',sched:'Agendar',msg:'15 dias',chk:'30 dias',up:'Próximo',far:'Futuro'}[e.b]}</span><div class="a">${a}</div></div>`}
+function render(){const all=db.flatMap(evs),at=ev=>all.filter(e=>['late','sched','msg','chk'].includes(e.b)),n=k=>db.filter(p=>match(p,k)).length;
+ $('#t1').className='btn'+(view==1?' on':'');$('#t2').className='btn'+(view==2?' on':'');
+ if(view==1){const A=at(),U=all.filter(e=>e.b=='up').sort((a,b)=>a.due.localeCompare(b.due));
+  const K=[['ativos','Pacientes ativos'],['sched','Retornos para agendar'],['late','Retornos atrasados'],['msg','Mensagens 15 dias'],['chk','Check-ins pendentes'],['up','Próximos acompanhamentos'],['plano','Pacientes em plano'],['glp','Pacientes em GLP-1']];
+  $('#v').innerHTML=`<div class="kpis">${K.map(([k,l])=>`<button class="k ${['late','sched','msg','chk'].includes(k)&&n(k)?'hot':''}" onclick="flt='${k}';view=2;render()"><b>${n(k)}</b><span>${l}</span></button>`).join('')}</div>
+  <h2>Precisa da minha atenção (${A.length})</h2>${A.map(ev).join('')||'<div class="empty">Nada pendente agora. ✓</div>'}
+  <h2>Próximos acompanhamentos</h2>${U.map(ev).join('')||'<div class="empty">Nenhum acompanhamento nos próximos 30–60 dias.</div>'}`;return}
+ const L=db.filter(p=>match(p,flt)&&p.nome.toLowerCase().includes(qs.toLowerCase())).sort((a,b)=>((nxt(a)||{due:'9'}).due).localeCompare((nxt(b)||{due:'9'}).due));
+ $('#v').innerHTML=`<input id="q" placeholder="Buscar paciente…" value="${esc(qs)}" oninput="qs=this.value;render();$('#q').focus()"><div class="chips">${Object.entries(FL).map(([k,l])=>`<button class="btn ${flt==k?'on':''}" onclick="flt='${k}';render()">${l}</button>`).join('')}</div>
+ <div class="pl h"><span>Nome</span><span>Última consulta</span><span>Tipo</span><span>GLP-1</span><span>Próximo acompanhamento</span><span>Data prevista</span><span>Status</span><span></span></div>
+ ${L.map(p=>{const l=last(p),x=nxt(p);return`<div class="row pl"><span class="n" onclick="hist('${p.id}')">${esc(p.nome)}</span><span>${br(l.date)}</span><span>${l.tipo||'—'}</span><span>${l.glp||'—'}</span><span>${x?x.l:agd(p)?'Retorno agendado':'—'}</span><span>${x?br(x.due):'—'}</span><span class="b ${p.status=='Ativo'?'ok':''}">${p.status}</span><button class="btn" onclick="hist('${p.id}')">Histórico</button></div>`}).join('')||'<div class="empty">Nenhum paciente encontrado.</div>'}
+ <div style="margin-top:20px"><label class="btn" style="display:inline-block">Importar CSV<input type="file" accept=".csv" hidden onchange="imp(this.files[0])"></label> <span class="sans" style="font-size:12px;color:var(--mut)">Colunas: nome, data consulta, tipo, glp1, entrega, próxima, status</span></div>`}
+function tab(n){view=n;if(n==2)flt='todos';render()}
+// ---- importação CSV
+function imp(file){if(!file)return;file.text().then(t=>{const ls=t.split(/\r?\n/).filter(x=>x.trim()),sep=ls[0].includes(';')?';':',',dt=s=>{s=(s||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);return m?(m[3].length==2?'20'+m[3]:m[3])+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):/^\d{4}-\d\d-\d\d$/.test(s)?s:''};
+ const tp=s=>/plano/i.test(s)?'Plano':/retorno/i.test(s)?'Retorno':'Avulsa';let ct=0;
+ ls.slice(1).forEach(l=>{const c=l.split(sep).map(x=>x.replace(/^"|"$/g,'').trim());if(!c[0]||!dt(c[1]))return;
+  let p=db.find(p=>p.nome.toLowerCase()==c[0].toLowerCase());if(!p){p={id:uid(),nome:c[0],status:PS.find(s=>s.toLowerCase()==(c[6]||'').toLowerCase())||'Ativo',consults:[]};db.push(p)}
+  p.consults.push({id:uid(),date:dt(c[1]),tipo:tp(c[2]),glp:/^s/i.test(c[3])?'Sim':'Não',entrega:dt(c[4])||dt(c[1]),proxima:dt(c[5]),msg:false,chk:false,fu:{},obs:''});ct++;
+  const cc=p.consults.at(-1);if(cc.proxima)cc.fu[60]={st:'Agendado',date:cc.proxima}});
+ db.forEach(save);toast(ct+' consultas importadas ✓');render()})}
+load();
+</script></body></html>

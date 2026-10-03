@@ -1,69 +1,88 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Painel de Pacientes</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Consultório · Amanda Muzzio</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f1ea;--card:#fffdf9;--ink:#4a3728;--mut:#8a7767;--terra:#b9694a;--sage:#7f9170;--sand:#e8dcca;--line:#eadfd0}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Georgia,'Times New Roman',serif}
+:root{--bg:#fbfaf7;--sf:#fff;--ink:#2b2622;--mut:#8b8178;--ln:#ece7df;--terra:#b9694a;--sage:#6f8361;--vio:#8f86b8;--warn:#a9442a;--sand:#f3efe8;--r:14px}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 'Inter',system-ui,sans-serif;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit}
-.w{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
-h1{font-size:24px;margin:0;font-weight:500}h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:28px 0 10px;font-family:system-ui,sans-serif}
-.sans,button,input,select,textarea,.b{font-family:system-ui,sans-serif}
-.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px}
+.app{display:flex;min-height:100vh}
+.side{width:224px;flex:none;background:var(--sf);border-right:1px solid var(--ln);padding:22px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow:auto}
+.br{color:var(--mut);font-size:14px;padding:0 10px 20px}.br b{color:var(--ink);font-weight:600}
+.nv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:9px;padding:8px 10px;cursor:pointer;color:var(--ink)}
+.nv:hover{background:var(--sand)}.nv.on{background:var(--sand);font-weight:600}.nv svg{flex:none;color:var(--mut)}.nv.on svg{color:var(--terra)}
+.nf{margin-top:auto;padding-top:16px}.nf .nv{font-size:13px;color:var(--mut)}.nf .mu{padding:6px 10px}
+main{flex:1;min-width:0;padding:36px 44px 70px;max-width:1060px}
+h1{font-weight:300;font-size:34px;line-height:1.2;margin:0;letter-spacing:-.6px}h1 b{font-weight:600}h1 i{color:var(--terra);font-style:normal}
+h2{font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:30px 0 12px}
+.mu{color:var(--mut);font-size:13.5px}.wn{color:var(--warn)}.dn{text-decoration:line-through;color:var(--mut)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:26px 0 8px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:16px 18px}
+.card.c1{background:linear-gradient(135deg,#fffdf3,#fff);border-color:#efe5bf}
+.card small{display:block;font:11px 'DM Mono',monospace;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+.card .n{font-size:42px;font-weight:300;line-height:1.1;margin-top:8px}
+.box{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font:11px 'DM Mono',monospace;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);text-align:left;padding:11px 14px;border-bottom:1px solid var(--ln);white-space:nowrap}
+td{padding:12px 14px;border-bottom:1px solid var(--ln);vertical-align:top}
+tr:last-child td{border-bottom:0}tbody tr.cl{cursor:pointer}tbody tr.cl:hover{background:var(--bg)}
+td.bar{box-shadow:inset 3px 0 0 var(--c,var(--ln))}
+.tag{display:inline-block;font:12px 'DM Mono',monospace;background:var(--sand);border-radius:6px;padding:1px 8px;margin:0 4px 3px 0;white-space:nowrap}
+.btn{border:1px solid var(--ln);background:var(--sf);border-radius:10px;padding:7px 13px;cursor:pointer;font-size:13px;white-space:nowrap}
 .btn:hover{background:var(--sand)}.pri{background:var(--terra);color:#fff;border-color:var(--terra)}.pri:hover{background:#a55a3d}
-.tabs{display:flex;gap:6px}.tabs .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
-.k{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;box-shadow:0 1px 3px #4a372810;text-align:left}
-.k:hover{border-color:var(--terra)}.k b{display:block;font-size:28px;font-weight:500;font-family:Georgia,serif}.k span{font-size:12px;color:var(--mut)}
-.k.hot b{color:var(--terra)}
-.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 3px #4a372808}
+.q{padding:1px 9px}.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--sf);border:1px solid var(--ln);border-left:3px solid var(--terra);border-radius:var(--r);padding:12px 14px;margin-bottom:8px}
+.row.late{border-left-color:var(--warn)}.row.up,.row.far{border-left-color:var(--ln)}
 .row .n{font-weight:600;cursor:pointer;min-width:130px;flex:1}.row .n:hover{color:var(--terra)}
-.row .d{flex:3;min-width:200px;font-size:13px;color:var(--mut)}.row .d strong{color:var(--ink);font-weight:600}
-.row .a{display:flex;gap:6px;flex-wrap:wrap}
+.row .d{flex:3;min-width:200px;font-size:13px;color:var(--mut)}.row .d strong{color:var(--ink);font-weight:600}.row .a{display:flex;gap:6px;flex-wrap:wrap}
 .b{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11px;background:var(--sand)}
-.b.late{background:#f1d5c9;color:#8f3f22}.b.sched{background:#f4e6c8;color:#7a5a16}.b.ok{background:#dfe6d6;color:#4d5f3f}
+.b.late{background:#f4dcd2;color:#8f3f22}.b.sched{background:#f6ebcf;color:#7a5a16}.b.ok{background:#e1e8d9;color:#4d5f3f}
 .pl{display:grid;grid-template-columns:1.4fr .9fr .7fr .5fr 2fr .9fr .8fr auto;gap:10px;align-items:center}
-.pl.h{font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:0 14px;margin-bottom:6px}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}.chips .btn{padding:5px 12px;border-radius:20px}.chips .on{background:var(--sage);color:#fff;border-color:var(--sage)}
-input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}
-#q{max-width:340px}
-.ov{position:fixed;inset:0;background:#4a372888;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 12px;z-index:5}
-.md{background:var(--bg);border-radius:18px;max-width:620px;width:100%;padding:22px}
-.md label{display:block;font:600 12px system-ui;color:var(--mut);margin:12px 0 4px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.cs{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
-.ln{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
-#t{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font:13px system-ui;opacity:0;transition:.25s;z-index:9;pointer-events:none}
-#t.s{opacity:1}#t.err{background:#8f3f22}
-.att{background:#f8e8de;border:1px solid #e6c4b0;border-radius:18px;padding:16px;margin-top:24px;box-shadow:0 4px 14px #b9694a22}.att.ok{background:#eef2e8;border-color:#d3dcc6;box-shadow:none}.ah{display:flex;align-items:center;gap:10px;font:600 19px Georgia,serif;margin-bottom:12px;color:#8f3f22}.att.ok .ah{color:var(--sage)}.ah b{background:var(--terra);color:#fff;border-radius:20px;padding:0 12px;font:600 15px system-ui}.att .row{border-left:5px solid var(--terra);box-shadow:0 2px 6px #b9694a1a}.att .row.late{border-left-color:#8f3f22}.att .row .n{font-size:17px}.att .row .d strong{font-size:15px}
-.empty{color:var(--mut);padding:14px;font-style:italic}
-@media(max-width:760px){.pl.h{display:none}.pl{grid-template-columns:1fr 1fr}.pl>*:nth-child(5){grid-column:1/3}}
-</style></head><body><div class="w">
-<header><div><h1>Painel de Pacientes</h1><div class="sans" style="font-size:12px;color:var(--mut)" id="sync"></div></div>
-<div style="display:flex;gap:8px;flex-wrap:wrap"><div class="tabs"><button class="btn on" id="t1" onclick="tab(1)">Painel</button><button class="btn" id="t2" onclick="tab(2)">Pacientes</button></div>
-<button class="btn" onclick="cfg()">⚙︎</button><button class="btn pri" onclick="abrirForm()">+ Novo paciente</button></div></header>
-<div id="v"></div></div>
+.pl.h{font:11px 'DM Mono',monospace;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);padding:0 14px;margin-bottom:6px;border:0;background:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 16px}.chips .btn{border-radius:20px;padding:5px 12px}.chips .on{background:var(--ink);color:#fff;border-color:var(--ink)}.chips span{opacity:.55;margin-left:3px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--ln);border-radius:10px;background:#fff}
+#q,#eq{max-width:340px}.addt{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.addt input[type=text]{flex:1;min-width:180px}.addt input[type=date]{width:auto}
+.tr{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--ln)}.tr:last-child{border-bottom:0}.tr input{width:auto}.tr>span:nth-child(2){flex:1}
+.ov{position:fixed;inset:0;background:#2b262288;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 12px;z-index:5}
+.md{background:var(--bg);border-radius:18px;max-width:620px;width:100%;padding:22px}.md h2{margin-top:0}
+.md label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:12px 0 4px}.md label.c{display:flex;gap:8px;align-items:center}.md label.c input{width:auto}.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cs{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:14px;margin:10px 0}
+.ln{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--ln);font-size:13px}
+#t{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.25s;z-index:9;pointer-events:none;max-width:92%}
+#t.s{opacity:1}#t.err{background:var(--warn)}.empty{color:var(--mut);padding:16px 14px}
+@media(max-width:800px){.app{display:block}.side{position:static;width:auto;height:auto;flex-direction:row;overflow-x:auto;padding:12px;border:0;border-bottom:1px solid var(--ln)}.br{display:none}.nv{width:auto;white-space:nowrap}.nf{margin:0;padding:0;display:flex}.nf .mu{display:none}main{padding:22px 16px 60px}h1{font-size:28px}.pl.h{display:none}.pl{grid-template-columns:1fr 1fr}.pl>*:nth-child(5){grid-column:1/3}}
+</style></head><body>
+<div class="app"><nav class="side" id="nav"></nav><main><div id="v"></div></main></div>
 <div id="m"></div><div id="t"></div>
 <script>
-const $=s=>document.querySelector(s),T=(()=>{const d=new Date();return f(d)})();
+const $=s=>document.querySelector(s);
+const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 function f(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+const T=f(new Date());
 const D=s=>new Date(s+'T12:00:00'),add=(s,n)=>{const d=D(s);d.setDate(d.getDate()+n);return f(d)},diff=(a,b)=>Math.round((D(a)-D(b))/864e5);
-const br=s=>s?s.split('-').reverse().join('/'):'—',uid=()=>Math.random().toString(36).slice(2,10),esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let db=[],view=1,flt='todos',qs='';
-const ST=['Não agendado','Agendado','Realizado','Não vai retornar','Pausado','Alta'],PS=['Ativo','Pausado','Alta','Não vai retornar'];
+const br=s=>s?s.split('-').reverse().join('/'):'—',sh=s=>s?br(s).slice(0,5):'—',uid=()=>Math.random().toString(36).slice(2,10),esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let db=[],X={tar:[],pos:[],est:[]},view='hoje',flt='todos',qs='',eq='';
+const ST=['Não agendado','Agendado','Realizado','Não vai retornar','Pausado','Alta'],PS=['Ativo','Pausado','Alta','Não vai retornar'],PST=['ideia','produzindo','pronto','publicado'];
 const FL={todos:'Todos',acao:'Precisa de ação',sched:'Retorno próximo',late:'Retorno atrasado',naoag:'Retorno não agendado',msg:'Mensagem 15 dias',chk:'Check-in 30 dias',agend:'Agendados',plano:'Plano',glp:'GLP-1',pausado:'Pausados',ativos:'Ativos',up:'Próximos'};
-function toast(m,e){const t=$('#t');t.textContent=m;t.className='s'+(e?' err':'');clearTimeout(t.h);t.h=setTimeout(()=>t.className='',2600)}
+function toast(m,e){const t=$('#t');t.textContent=m;t.className='s'+(e?' err':'');clearTimeout(t.h);t.h=setTimeout(()=>t.className='',3200)}
 // ---- armazenamento (Google Sheets via Apps Script)
-let API=localStorage.getItem('api')||'';
-function cache(){localStorage.setItem('db',JSON.stringify(db))}
-async function post(b){cache();if(!API){toast('Salvo só neste aparelho — configure ⚙︎ para sincronizar','err');return}
- try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(b)});await r.json();toast(b.action=='del'?'Excluído ✓':'Salvo e sincronizado ✓')}
+let API=LS.g('api')||'',KEY=LS.g('key')||'',V2=false;
+const cache=()=>{LS.s('db',JSON.stringify(db));LS.s('x',JSON.stringify(X))};
+const url=()=>API+(API.includes('?')?'&':'?')+'v=2&k='+encodeURIComponent(KEY);
+async function post(b){cache();if(!API){toast('Salvo só neste aparelho — configure a sincronização','err');return}
+ if(b.col!='pac'&&!V2){toast('Salvo só neste aparelho — atualize o Apps Script para sincronizar','err');return}
+ try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...b,k:KEY})});const j=await r.json();if(j.erro)throw 0;toast(b.action=='del'?'Excluído ✓':'Salvo e sincronizado ✓')}
  catch(e){toast('Salvo só neste aparelho — falha ao sincronizar','err')}}
-const save=p=>post({action:'save',patient:p});
-function load(){db=JSON.parse(localStorage.getItem('db')||'[]');$('#sync').textContent=API?'Sincronizado com Google Sheets':'Modo local — configure ⚙︎ para sincronizar';render();
- if(API)fetch(API).then(r=>r.json()).then(r=>{db=r;cache();render()}).catch(()=>toast('Sem conexão com a planilha','err'))}
-function cfg(){const u=prompt('Cole a URL do Apps Script (Aplicativo da Web). Deixe vazio para modo local:',API);if(u===null)return;API=u.trim();localStorage.setItem('api',API);load()}
-// ---- regras
+const save=(p,c)=>post({action:'save',col:c||'pac',item:p,patient:p});
+function load(){db=JSON.parse(LS.g('db')||'[]');Object.assign(X,JSON.parse(LS.g('x')||'{}'));render();
+ if(API)fetch(url()).then(r=>r.json()).then(r=>{if(r.erro)throw 0;V2=!Array.isArray(r);
+  if(V2){db=r.pac||[];['tar','pos','est'].forEach(k=>X[k]=r[k]||[])}else{db=r;toast('Atualize o Apps Script para sincronizar tarefas, postagens e estoque','err')}cache();render()}).catch(()=>toast('Sem conexão com a planilha (ou chave incorreta)','err'))}
+function cfg(){const u=prompt('Cole a URL do Apps Script (Aplicativo da Web). Deixe vazio para modo local:',API);if(u===null)return;API=u.trim();LS.s('api',API);
+ if(API){const k=prompt('Chave de acesso, se você definiu uma no Apps Script. Deixe vazio se não definiu:',KEY);if(k!==null){KEY=k.trim();LS.s('key',KEY)}}load()}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({pac:db,...X},null,1)],{type:'application/json'}));a.download='backup-consultorio-'+T+'.json';a.click();toast('Backup baixado ✓')}
+// ---- regras dos pacientes
 const fu=(c,k)=>(c.fu&&c.fu[k])||{st:'Não agendado'};
 function E(p,c,kind,due,k){const days=diff(due,T);let b,l;
  if(kind=='fu'){b=days<0?'late':days<=30?'sched':days<=60?'up':'far';l=days<0?`Retorno atrasado — não agendado`:days<=30?'Agendar retorno':'Retorno'+(c.tipo=='Plano'?' de '+k+' dias':'')+' ainda não agendado'}
@@ -78,21 +97,20 @@ const nxt=p=>[...evs(p)].sort((a,b)=>a.due.localeCompare(b.due))[0];
 const agd=p=>p.consults.some(c=>Object.values(c.fu||{}).some(x=>x.st=='Agendado'));
 function match(p,k){const e=evs(p),h=b=>e.some(x=>x.b==b);const l=last(p);
  return{todos:1,acao:h('late')||h('sched')||h('msg')||h('chk'),sched:h('sched'),late:h('late'),naoag:e.some(x=>x.kind=='fu'),msg:h('msg'),chk:h('chk'),agend:agd(p),plano:p.status=='Ativo'&&l.tipo=='Plano',glp:p.status=='Ativo'&&l.glp=='Sim',pausado:p.status=='Pausado',ativos:p.status=='Ativo',up:h('up')}[k]}
-// ---- ações
+// ---- ações dos pacientes
 function P(id){return db.find(p=>p.id==id)}function C(p,id){return p.consults.find(c=>c.id==id)}
-function tog(pid,cid,f){const p=P(pid),c=C(p,cid);c[f]=!c[f];save(p);render();hist(pid,1)}
-function quick(pid,cid,f){const p=P(pid);C(p,cid)[f]=true;save(p);render()}
+function tog(pid,cid,fl){const p=P(pid),c=C(p,cid);c[fl]=!c[fl];save(p);render();hist(pid)}
+function quick(pid,cid,fl){const p=P(pid);C(p,cid)[fl]=true;save(p);render()}
 function sch(pid,cid,k){const p=P(pid),c=C(p,cid),x=fu(c,k);
- $('#m').innerHTML=`<div class="ov"><div class="md"><h2 style="margin-top:0">Retorno de ${k} dias — ${esc(p.nome)}</h2><label>Status</label><select id="s1" onchange="if(this.value=='Realizado'&&$('#s2').value=='${add(c.date,k)}')$('#s2').value=T">${ST.map(s=>`<option ${s==x.st?'selected':''}>${s}</option>`).join('')}</select><label>Data da consulta (agendada ou realizada)</label><input type="date" id="s2" value="${x.date||add(c.date,k)}"><div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="doSch('${pid}','${cid}',${k})">Salvar</button></div></div></div>`}
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h2>Retorno de ${k} dias — ${esc(p.nome)}</h2><label>Status</label><select id="s1" onchange="if(this.value=='Realizado'&&$('#s2').value=='${add(c.date,k)}')$('#s2').value=T">${ST.map(s=>`<option ${s==x.st?'selected':''}>${s}</option>`).join('')}</select><label>Data da consulta (agendada ou realizada)</label><input type="date" id="s2" value="${x.date||add(c.date,k)}"><div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="doSch('${pid}','${cid}',${k})">Salvar</button></div></div></div>`}
 function doSch(pid,cid,k){const p=P(pid),c=C(p,cid),st=$('#s1').value,d=$('#s2').value;
  if(st=='Agendado'&&!d)return toast('Informe a data','err');
  c.fu=c.fu||{};c.fu[k]={st,date:(st=='Agendado'||st=='Realizado')?d:''};if(st=='Agendado')c.proxima=d;save(p);cl();render()}
 const cl=()=>$('#m').innerHTML='';
-function del(pid){if(!confirm('Excluir este paciente e todo o histórico? Não dá para desfazer.'))return;db=db.filter(p=>p.id!=pid);post({action:'del',id:pid});cl();render()}
+function del(pid){if(!confirm('Excluir este paciente e todo o histórico? Não dá para desfazer.'))return;db=db.filter(p=>p.id!=pid);post({action:'del',col:'pac',id:pid});cl();render()}
 function delC(pid,cid){if(!confirm('Excluir esta consulta?'))return;const p=P(pid);p.consults=p.consults.filter(c=>c.id!=cid);save(p);render();hist(pid)}
-// ---- formulário
 function abrirForm(pid,cid){const p=pid?P(pid):null,c=cid?C(p,cid):{},ed=!p||cid;
- $('#m').innerHTML=`<div class="ov"><div class="md"><h2 style="margin-top:0">${!p?'Novo paciente':cid?'Editar consulta':'Nova consulta — '+esc(p.nome)}</h2>
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h2>${!p?'Novo paciente':cid?'Editar consulta':'Nova consulta — '+esc(p.nome)}</h2>
  ${ed?`<label>Nome</label><input id="f1" value="${esc(p?p.nome:'')}"><label>Status do paciente</label><select id="f2">${PS.map(s=>`<option ${p&&p.status==s?'selected':''}>${s}</option>`).join('')}</select>`:''}
  <div class="g2"><div><label>Data da consulta</label><input type="date" id="f3" value="${c.date||T}" onchange="if(!$('#f5').dataset.u)$('#f5').value=this.value"></div>
  <div><label>Tipo</label><select id="f4">${['Avulsa','Retorno','Plano'].map(s=>`<option ${c.tipo==s?'selected':''}>${s}</option>`).join('')}</select></div>
@@ -100,7 +118,7 @@ function abrirForm(pid,cid){const p=pid?P(pid):null,c=cid?C(p,cid):{},ed=!p||cid
  <div><label>Em tratamento com GLP-1?</label><select id="f6"><option>Não</option><option ${c.glp=='Sim'?'selected':''}>Sim</option></select></div></div>
  <label>Próxima consulta agendada (opcional)</label><input type="date" id="f7" value="${c.proxima||''}">
  <label>Observações</label><textarea id="f8" rows="3">${esc(c.obs)}</textarea>
- <div class="sans" style="font-size:12px;color:var(--mut);margin-top:8px">Mensagem de 15 dias, check-in de 30 dias e retornos são calculados automaticamente.</div>
+ <div class="mu" style="margin-top:8px">Mensagem de 15 dias, check-in de 30 dias e retornos são calculados automaticamente.</div>
  <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="sv('${pid||''}','${cid||''}')">Salvar</button></div></div></div>`}
 function sv(pid,cid){const nome=$('#f1')?$('#f1').value.trim():'';if($('#f1')&&!nome)return toast('Informe o nome','err');
  let p=pid?P(pid):{id:uid(),nome,status:'Ativo',consults:[]};if(!pid)db.push(p);
@@ -110,41 +128,81 @@ function sv(pid,cid){const nome=$('#f1')?$('#f1').value.trim():'';if($('#f1')&&!
  if(!c.date)return toast('Informe a data da consulta','err');
  if(c.proxima){const ks=c.tipo=='Plano'?[60,90,120]:[60],k=ks.find(k=>fu(c,k).st=='Não agendado');if(k){c.fu=c.fu||{};c.fu[k]={st:'Agendado',date:c.proxima}}}
  save(p);cl();render()}
-// ---- histórico
-function hist(pid,keep){const p=P(pid);if(!p)return;const cs=[...p.consults].sort((a,b)=>b.date.localeCompare(a.date));
+function hist(pid){const p=P(pid);if(!p)return;const cs=[...p.consults].sort((a,b)=>b.date.localeCompare(a.date));
  const pend=(ok,t)=>`<span class="b ${ok?'ok':'sched'}">${ok?t[0]:t[1]}</span>`;
- $('#m').innerHTML=`<div class="ov"><div class="md"><div style="display:flex;justify-content:space-between;align-items:start"><div><h1>${esc(p.nome)}</h1><span class="b">${p.status}</span></div><button class="btn" onclick="cl()">✕</button></div>
- <div style="margin:12px 0;display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri" onclick="abrirForm('${pid}')">+ Nova consulta</button><button class="btn" onclick="abrirForm('${pid}','${last(p).id}')">Editar</button><button class="btn" onclick="del('${pid}')">Excluir paciente</button></div>
- ${cs.map(c=>`<div class="cs"><div style="display:flex;justify-content:space-between;gap:8px"><div><strong>Consulta: ${br(c.date)}</strong><div class="sans" style="font-size:12px;color:var(--mut)">Tipo: ${c.tipo} · GLP-1: ${c.glp}</div></div><div><button class="btn" onclick="abrirForm('${pid}','${c.id}')">Editar</button> <button class="btn" onclick="delC('${pid}','${c.id}')">🗑</button></div></div>
- ${c.obs?`<div class="sans" style="font-size:13px;margin:6px 0">${esc(c.obs)}</div>`:''}
+ $('#m').innerHTML=`<div class="ov"><div class="md"><div style="display:flex;justify-content:space-between;align-items:start"><div><h1 style="font-size:26px">${esc(p.nome)}</h1><span class="b">${p.status}</span></div><button class="btn" onclick="cl()">✕</button></div>
+ <div style="margin:12px 0;display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri" onclick="abrirForm('${pid}')">+ Nova consulta</button>${last(p).id?`<button class="btn" onclick="abrirForm('${pid}','${last(p).id}')">Editar</button>`:''}<button class="btn" onclick="del('${pid}')">Excluir paciente</button></div>
+ ${cs.map(c=>`<div class="cs"><div style="display:flex;justify-content:space-between;gap:8px"><div><strong>Consulta: ${br(c.date)}</strong><div class="mu">Tipo: ${c.tipo} · GLP-1: ${c.glp}</div></div><div><button class="btn" onclick="abrirForm('${pid}','${c.id}')">Editar</button> <button class="btn" onclick="delC('${pid}','${c.id}')">🗑</button></div></div>
+ ${c.obs?`<div style="font-size:13px;margin:6px 0">${esc(c.obs)}</div>`:''}
  <div class="ln"><span>Plano entregue: ${br(c.entrega)}</span></div>
  ${c.entrega?`<div class="ln"><span>Mensagem 15 dias: ${br(add(c.entrega,15))} ${pend(c.msg,['Enviada','Pendente'])}</span><button class="btn" onclick="tog('${pid}','${c.id}','msg')">${c.msg?'Desfazer':'✓ Enviada'}</button></div>`:''}
  <div class="ln"><span>Check-in 30 dias: ${br(add(c.date,30))} ${pend(c.chk,['Realizado','Pendente'])}</span><button class="btn" onclick="tog('${pid}','${c.id}','chk')">${c.chk?'Desfazer':'✓ Realizado'}</button></div>
  ${(c.tipo=='Plano'?[60,90,120]:[60]).map(k=>{const x=fu(c,k);return`<div class="ln"><span>${k} dias: ${br(add(c.date,k))} — ${x.st}${x.date?' em '+br(x.date):''}</span><button class="btn" onclick="sch('${pid}','${c.id}',${k})">Status / agendar</button></div>`}).join('')}</div>`).join('')}</div></div>`}
-// ---- renderização
+// ---- tarefas, postagens e estoque
+const sx=(c,it)=>{save(it,c);render()};
+const rm=(c,id)=>{X[c]=X[c].filter(i=>i.id!=id);post({action:'del',col:c,id});render()};
+function addT(){const v=$('#nt').value.trim();if(!v)return;sx('tar',(X.tar.push({id:uid(),txt:v,data:$('#nd').value,ok:false}),X.tar.at(-1)))}
+function tk(id){const t=X.tar.find(i=>i.id==id);t.ok=!t.ok;sx('tar',t)}
+function cyc(id){const p=X.pos.find(i=>i.id==id);p.st=PST[(PST.indexOf(p.st)+1)%PST.length];sx('pos',p)}
+function qty(id,d){const s=X.est.find(i=>i.id==id);s.qtd=Math.max(0,(+s.qtd||0)+d);sx('est',s)}
+const SG={pos:{t:'postagem',f:[['tema','tema ou ideia','text'],['data','data','date'],['fmt','formato','select',['carrossel','reels','story','dump','TBT','outro']],['st','status','select',PST]],d:{st:'ideia',fmt:'carrossel',data:T}},
+est:{t:'amostra',f:[['prod','produto','text'],['ativo','ativo','text'],['marca','marca','text'],['cat','categoria','text'],['sabor','sabor','text'],['gl','sem glúten','chk'],['vg','vegano','chk'],['lc','zero lactose','chk'],['apr','apresentação','select',['cápsula','pó','líquido','outra']],['val','validade','date'],['qtd','quantidade','number']],d:{apr:'cápsula',qtd:1}}};
+function gOpen(k,id){const it=id?X[k].find(i=>i.id==id):SG[k].d;
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h2>${id?'Editar':'Nova'} ${SG[k].t}</h2>${SG[k].f.map(([n,l,t,o])=>{const v=it[n];
+ return t=='chk'?`<label class="c"><input type="checkbox" id="g_${n}" ${v?'checked':''}> ${l}</label>`:t=='select'?`<label>${l}</label><select id="g_${n}">${o.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}</select>`:`<label>${l}</label><input type="${t}" id="g_${n}" value="${esc(v)}">`}).join('')}
+ <div style="margin-top:16px;display:flex;justify-content:space-between;gap:8px"><span>${id?`<button class="btn" onclick="gDel('${k}','${id}')">Excluir</button>`:''}</span><span style="display:flex;gap:8px"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="gSave('${k}','${id||''}')">Salvar</button></span></div></div></div>`}
+function gSave(k,id){const o={};SG[k].f.forEach(([n,,t])=>{const el=$('#g_'+n);o[n]=t=='chk'?el.checked:t=='number'?(+el.value||0):el.value.trim()});
+ if(!o[SG[k].f[0][0]])return toast('Preencha o primeiro campo','err');
+ let it=id?X[k].find(i=>i.id==id):null;if(it)Object.assign(it,o);else{it={id:uid(),...o};X[k].push(it)}cl();sx(k,it)}
+function gDel(k,id){if(!confirm('Excluir?'))return;cl();rm(k,id)}
+// ---- telas
+const IC={hoje:'M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z',tar:'M3 3h10v10H3zM5.5 8l2 2 3-4',pac:'M8 7.5a2.3 2.3 0 100-4.6 2.3 2.3 0 000 4.6zM3 13.5c0-2.6 2.2-4 5-4s5 1.4 5 4',pos:'M3 4h10v9H3zM3 7h10M6 2.5v3M10 2.5v3',est:'M2.5 5.5L8 3l5.5 2.5v5L8 13l-5.5-2.5zM2.5 5.5L8 8l5.5-2.5M8 8v5'};
+const NV=[['hoje','hoje'],['tar','minhas tarefas'],['pac','pacientes'],['pos','postagens'],['est','estoque']];
+const svg=k=>`<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg>`;
+function go(k){view=k;if(k=='pac')flt='todos';render();scrollTo(0,0)}
+const when=d=>{const n=diff(d,T);return n==0?'hoje':n<0?`<span class="wn">atrasada ${-n}d</span>`:'em '+n+'d'};
 function ev(e){const a=e.kind=='fu'?`<button class="btn pri" onclick="sch('${e.p.id}','${e.c.id}',${e.k})">Agendar</button><button class="btn" onclick="sch('${e.p.id}','${e.c.id}',${e.k})">Alterar status</button>`:`<button class="btn pri" onclick="quick('${e.p.id}','${e.c.id}','${e.kind}')">${e.kind=='msg'?'Marcar como enviada':'Marcar check-in realizado'}</button>`;
  const t=e.days<0?`há ${-e.days} dias`:e.days==0?'hoje':`em ${e.days} dias`;
  return`<div class="row ${e.b}"><div class="n" onclick="hist('${e.p.id}')">${esc(e.p.nome)}</div><div class="d"><strong>${e.l}</strong><br>Prazo ${br(e.due)} (${t})${e.p.consults.length>1?' · consulta de '+br(e.c.date):''}</div><span class="b ${e.b=='late'?'late':e.b=='sched'?'sched':''}">${{late:'Atrasado',sched:'Agendar',msg:'15 dias',chk:'30 dias',up:'Próximo',far:'Futuro'}[e.b]}</span><div class="a">${a}</div></div>`}
-function render(){const all=db.flatMap(evs),at=ev=>all.filter(e=>['late','sched','msg','chk'].includes(e.b)),n=k=>db.filter(p=>match(p,k)).length;
- $('#t1').className='btn'+(view==1?' on':'');$('#t2').className='btn'+(view==2?' on':'');
- if(view==1){const A=at(),U=all.filter(e=>e.b=='up').sort((a,b)=>a.due.localeCompare(b.due));
-  const K=[['ativos','Pacientes ativos'],['sched','Retornos para agendar'],['late','Retornos atrasados'],['msg','Mensagens 15 dias'],['chk','Check-ins pendentes'],['up','Próximos acompanhamentos'],['plano','Pacientes em plano'],['glp','Pacientes em GLP-1']];
-  $('#v').innerHTML=`<div class="kpis">${K.map(([k,l])=>`<button class="k ${['late','sched','msg','chk'].includes(k)&&n(k)?'hot':''}" onclick="flt='${k}';view=2;render()"><b>${n(k)}</b><span>${l}</span></button>`).join('')}</div>
-  <section class="att ${A.length?'':'ok'}"><div class="ah"><span>Precisa da minha atenção</span><b>${A.length}</b></div>${A.map(ev).join('')||'<div class="empty">Nada pendente agora. ✓</div>'}</section>
-  <h2>Próximos acompanhamentos</h2>${U.map(ev).join('')||'<div class="empty">Nenhum acompanhamento nos próximos 30–60 dias.</div>'}`;return}
+function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>['late','sched','msg','chk'].includes(e.b)),
+ tk_=X.tar.filter(t=>!t.ok&&(!t.data||diff(t.data,T)<=0)).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),
+ N=A.length+tk_.length,late=A.filter(e=>e.b=='late').length+tk_.filter(t=>t.data&&diff(t.data,T)<0).length,
+ ex=X.est.filter(s=>s.val&&diff(s.val,T)<=30).length,wk=X.pos.filter(p=>p.data&&p.st!='publicado'&&diff(p.data,T)>=0&&diff(p.data,T)<=7),
+ up=[...all.filter(e=>e.b=='up'&&e.days<=7).map(e=>({k:'paciente',n:e.l+' · '+e.p.nome,d:e.due,c:'--terra'})),
+ ...X.tar.filter(t=>!t.ok&&t.data&&diff(t.data,T)>0&&diff(t.data,T)<=7).map(t=>({k:'tarefa',n:t.txt,d:t.data,c:'--sage'})),
+ ...wk.map(p=>({k:'post',n:p.fmt+' · '+p.tema,d:p.data,c:'--vio'}))].sort((a,b)=>a.d.localeCompare(b.d)),
+ h=new Date().getHours(),g=h<12?'bom dia':h<18?'boa tarde':'boa noite',dt=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+ return`<h1>${g}, <b>amanda</b><i>.</i></h1><div class="mu">${dt} · ${N} pendência${N==1?'':'s'}${late?' · '+late+' atrasada'+(late>1?'s':''):''}</div>
+ <div class="cards"><div class="card c1"><small>pendências para hoje</small><div class="n">${N}</div></div><div class="card"><small>retornos para agendar</small><div class="n">${A.filter(e=>e.kind=='fu').length}</div></div><div class="card"><small>amostras a vencer · 30d</small><div class="n">${ex}</div></div><div class="card"><small>posts na semana</small><div class="n">${wk.length}</div></div></div>
+ <h2>precisa da minha atenção</h2>${A.map(ev).join('')}${tk_.map(t=>`<div class="row" style="border-left-color:var(--sage)"><div class="n">${esc(t.txt)}</div><div class="d"><strong>Tarefa</strong><br>${t.data?when(t.data):'sem data'}</div><div class="a"><button class="btn pri" onclick="tk('${t.id}')">Feita</button></div></div>`).join('')}${N?'':'<div class="box"><div class="empty">Nada pendente agora. ✓</div></div>'}
+ <h2>próximos 7 dias</h2><div class="box"><table><thead><tr><th>tipo</th><th>o quê</th><th>quando</th></tr></thead><tbody>${up.length?up.map(x=>`<tr><td class="bar" style="--c:var(${x.c})"><span class="tag">${x.k}</span></td><td>${esc(x.n)}</td><td>${sh(x.d)} · ${when(x.d)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">Nada previsto.</td></tr>'}</tbody></table></div>`}
+function vPac(){const n=k=>db.filter(p=>match(p,k)).length;
  const L=db.filter(p=>match(p,flt)&&p.nome.toLowerCase().includes(qs.toLowerCase())).sort((a,b)=>((nxt(a)||{due:'9'}).due).localeCompare((nxt(b)||{due:'9'}).due));
- $('#v').innerHTML=`<input id="q" placeholder="Buscar paciente…" value="${esc(qs)}" oninput="qs=this.value;render();$('#q').focus()"><div class="chips">${Object.entries(FL).map(([k,l])=>`<button class="btn ${flt==k?'on':''}" onclick="flt='${k}';render()">${l}</button>`).join('')}</div>
+ return`<div class="top"><h1>pacientes<i>.</i></h1><button class="btn pri" onclick="abrirForm()">+ Novo paciente</button></div>
+ <input id="q" placeholder="Buscar paciente…" value="${esc(qs)}" oninput="qs=this.value;render();const x=$('#q');x.focus();x.setSelectionRange(99,99)"><div class="chips">${Object.entries(FL).map(([k,l])=>`<button class="btn ${flt==k?'on':''}" onclick="flt='${k}';render()">${l}${k=='todos'?'':'<span>'+n(k)+'</span>'}</button>`).join('')}</div>
  <div class="pl h"><span>Nome</span><span>Última consulta</span><span>Tipo</span><span>GLP-1</span><span>Próximo acompanhamento</span><span>Data prevista</span><span>Status</span><span></span></div>
- ${L.map(p=>{const l=last(p),x=nxt(p);return`<div class="row pl"><span class="n" onclick="hist('${p.id}')">${esc(p.nome)}</span><span>${br(l.date)}</span><span>${l.tipo||'—'}</span><span>${l.glp||'—'}</span><span>${x?x.l:agd(p)?'Retorno agendado':'—'}</span><span>${x?br(x.due):'—'}</span><span class="b ${p.status=='Ativo'?'ok':''}">${p.status}</span><button class="btn" onclick="hist('${p.id}')">Histórico</button></div>`}).join('')||'<div class="empty">Nenhum paciente encontrado.</div>'}
- <div style="margin-top:20px"><label class="btn" style="display:inline-block">Importar CSV<input type="file" accept=".csv" hidden onchange="imp(this.files[0])"></label> <span class="sans" style="font-size:12px;color:var(--mut)">Colunas: nome, data consulta, tipo, glp1, entrega, próxima, status</span></div>`}
-function tab(n){view=n;if(n==2)flt='todos';render()}
-// ---- importação CSV
+ ${L.map(p=>{const l=last(p),x=nxt(p);return`<div class="row pl" style="border-left-color:var(--ln)"><span class="n" onclick="hist('${p.id}')">${esc(p.nome)}</span><span>${br(l.date)}</span><span>${l.tipo||'—'}</span><span>${l.glp||'—'}</span><span>${x?x.l:agd(p)?'Retorno agendado':'—'}</span><span>${x?br(x.due):'—'}</span><span class="b ${p.status=='Ativo'?'ok':''}">${p.status}</span><button class="btn" onclick="hist('${p.id}')">Histórico</button></div>`}).join('')||'<div class="box"><div class="empty">Nenhum paciente encontrado.</div></div>'}
+ <div style="margin-top:20px"><label class="btn" style="display:inline-block">Importar CSV<input type="file" accept=".csv" hidden onchange="imp(this.files[0])"></label> <span class="mu">Colunas: nome, data consulta, tipo, glp1, entrega, próxima, status</span></div>`}
+function vTar(){const row=t=>`<div class="tr"><input type="checkbox" ${t.ok?'checked':''} onchange="tk('${t.id}')"><span class="${t.ok?'dn':''}">${esc(t.txt)}</span><span class="mu">${t.data?(!t.ok&&diff(t.data,T)<0?'<b class="wn">atrasada</b> ':'')+sh(t.data):''}</span><button class="btn q" onclick="rm('tar','${t.id}')">✕</button></div>`;
+ const P_=X.tar.filter(t=>!t.ok).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),Dn=X.tar.filter(t=>t.ok);
+ return`<div class="top"><h1>minhas tarefas<i>.</i></h1></div><div class="addt"><input type="text" id="nt" placeholder="nova tarefa…" onkeydown="if(event.key=='Enter')addT()"><input type="date" id="nd" value="${T}"><button class="btn pri" onclick="addT()">Adicionar</button></div>
+ <div class="box">${P_.map(row).join('')||'<div class="empty">Nenhuma tarefa pendente.</div>'}</div>${Dn.length?`<h2>concluídas</h2><div class="box">${Dn.map(row).join('')}</div>`:''}`}
+function vPos(){const L=[...X.pos].sort((a,b)=>(a.data||'9').localeCompare(b.data||'9'));
+ return`<div class="top"><h1>postagens<i>.</i></h1><button class="btn pri" onclick="gOpen('pos')">+ Nova postagem</button></div><div class="box"><table><thead><tr><th>data</th><th>formato</th><th>tema</th><th>status</th></tr></thead><tbody>${L.map(p=>`<tr class="cl" onclick="gOpen('pos','${p.id}')"><td class="bar" style="--c:var(--vio)">${sh(p.data)}</td><td><span class="tag">${esc(p.fmt)}</span></td><td>${esc(p.tema)}</td><td><button class="btn q ${p.st=='publicado'?'on':''}" onclick="event.stopPropagation();cyc('${p.id}')">${esc(p.st)}</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Nenhuma postagem planejada.</td></tr>'}</tbody></table></div><div class="mu" style="margin-top:8px">Clique no status para avançar: ideia → produzindo → pronto → publicado.</div>`}
+function vEst(){const L=X.est.filter(s=>!eq||[s.prod,s.ativo,s.marca,s.cat,s.sabor].join(' ').toLowerCase().includes(eq.toLowerCase())).sort((a,b)=>(a.val||'9').localeCompare(b.val||'9'));
+ const vv=s=>{if(!s.val)return'—';const n=diff(s.val,T);return`<span class="${n<0?'wn':''}">${br(s.val)}</span>${n<0?' <span class="tag wn">vencida</span>':n<=30?` <span class="tag" style="color:var(--terra)">${n}d</span>`:''}`};
+ return`<div class="top"><h1>estoque de amostras<i>.</i></h1><button class="btn pri" onclick="gOpen('est')">+ Nova amostra</button></div>
+ <div class="top"><input id="eq" placeholder="Buscar produto, ativo, marca…" value="${esc(eq)}" oninput="eq=this.value;render();const x=$('#eq');x.focus();x.setSelectionRange(99,99)"><span class="mu">ordenado pela validade mais próxima</span></div>
+ <div class="box"><table><thead><tr><th>produto</th><th>categoria · sabor</th><th>características</th><th>validade</th><th>qtd</th></tr></thead><tbody>${L.map(s=>`<tr class="cl" onclick="gOpen('est','${s.id}')"><td class="bar" style="--c:var(--sage)"><b>${esc(s.prod)}</b><div class="mu">${esc([s.ativo,s.marca].filter(Boolean).join(' · '))}</div></td><td>${esc([s.cat,s.sabor].filter(Boolean).join(' · '))||'—'}</td><td>${[s.apr,s.gl&&'sem glúten',s.vg&&'vegano',s.lc&&'zero lactose'].filter(Boolean).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</td><td>${vv(s)}</td><td style="white-space:nowrap" onclick="event.stopPropagation()"><button class="btn q" onclick="qty('${s.id}',-1)">−</button> ${+s.qtd||0} <button class="btn q" onclick="qty('${s.id}',1)">+</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nenhuma amostra cadastrada.</td></tr>'}</tbody></table></div>`}
+function render(){$('#nav').innerHTML=`<div class="br"><b>amanda muzzio</b> | nutricionista</div>`+NV.map(([k,l])=>`<button class="nv ${view==k?'on':''}" onclick="go('${k}')">${svg(k)}${l}</button>`).join('')+`<div class="nf"><button class="nv" onclick="cfg()">⚙︎ sincronização</button><button class="nv" onclick="exp()">⇩ exportar dados</button><div class="mu">${API?'Google Sheets':'modo local'}</div></div>`;
+ $('#v').innerHTML=({hoje:vHoje,tar:vTar,pac:vPac,pos:vPos,est:vEst})[view]()}
+// ---- importação CSV de pacientes
 function imp(file){if(!file)return;file.text().then(t=>{const ls=t.split(/\r?\n/).filter(x=>x.trim()),sep=ls[0].includes(';')?';':',',dt=s=>{s=(s||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);return m?(m[3].length==2?'20'+m[3]:m[3])+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):/^\d{4}-\d\d-\d\d$/.test(s)?s:''};
  const tp=s=>/plano/i.test(s)?'Plano':/retorno/i.test(s)?'Retorno':'Avulsa';let ct=0;
  ls.slice(1).forEach(l=>{const c=l.split(sep).map(x=>x.replace(/^"|"$/g,'').trim());if(!c[0]||!dt(c[1]))return;
   let p=db.find(p=>p.nome.toLowerCase()==c[0].toLowerCase());if(!p){p={id:uid(),nome:c[0],status:PS.find(s=>s.toLowerCase()==(c[6]||'').toLowerCase())||'Ativo',consults:[]};db.push(p)}
   p.consults.push({id:uid(),date:dt(c[1]),tipo:tp(c[2]),glp:/^s/i.test(c[3])?'Sim':'Não',entrega:dt(c[4])||dt(c[1]),proxima:dt(c[5]),msg:false,chk:false,fu:{},obs:''});ct++;
   const cc=p.consults.at(-1);if(cc.proxima)cc.fu[60]={st:'Agendado',date:cc.proxima}});
- db.forEach(save);toast(ct+' consultas importadas ✓');render()})}
+ db.forEach(p=>save(p));toast(ct+' consultas importadas ✓');render()})}
 load();
 </script></body></html>

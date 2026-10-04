@@ -365,16 +365,17 @@ function ev(e){const pi=e.p.id,ci=e.c.id;
   cic:B('Ver paciente',`hist('${pi}')`,'pri'),
   dec:B('Renovar',`dec('${pi}','${ci}','Renovar')`,'pri')+B('Encerrar',`dec('${pi}','${ci}','Encerrar')`)}[e.kind];
  const t=e.days<0?`há ${-e.days} dias`:e.days==0?'hoje':`em ${e.days} dias`,
-  rot={ret:'Agendar',msg:'Lembrete',chk:'Lembrete',enc:'Consulta',cic:'Ciclo',dec:'Ciclo 3/3'}[e.kind],
+  rot={ret:e.b=='far'?'Pendente':'Agendar',msg:'Lembrete',chk:'Lembrete',enc:'Consulta',cic:'Ciclo',dec:'Ciclo 3/3'}[e.kind],
   ex={ret:`prazo ${sh(e.due)} · ${e.days<0?`atrasado há ${-e.days} dia${e.days==-1?'':'s'}`:e.days==0?'vence hoje':`faltam ${e.days} dia${e.days==1?'':'s'}`} · consulta em ${sh(e.c.date)}`,
    msg:'hoje · plano entregue em '+sh(e.c.entrega),chk:'hoje · consulta em '+sh(e.c.date),enc:br(e.due)+' ('+t+')',cic:'prazo até '+br(e.due),dec:'3º encontro em '+sh(e.c.date)}[e.kind];
  return`<div class="row"><div class="who"><div class="nm"><span class="dot ${e.b=='late'?'late':e.b=='rem'?'far':''}"></span><button type="button" class="lk" onclick="hist('${pi}')">${esc(e.p.nome)}</button></div><div class="sub">${e.l} · ${ex}</div></div><span class="chip ${e.b=='late'?'late':e.kind=='ret'?'warn':''}">${e.b=='late'?'Atrasado':rot}</span>${a?`<div class="acts">${a}</div>`:''}</div>`}
 const EXT=['Nenhuma','Uma','Duas','Três','Quatro','Cinco','Seis','Sete','Oito','Nove','Dez'];
-const rets=()=>db.flatMap(evs).filter(e=>e.kind=='ret'&&(e.b=='late'||e.b=='now'));
+const rets=()=>db.flatMap(evs).filter(e=>e.kind=='ret'&&(e.b=='late'||e.b=='now')),retsF=()=>db.flatMap(evs).filter(e=>e.kind=='ret'&&e.b=='far').sort((a,b)=>a.due.localeCompare(b.due));
+const sub2=t=>`<div class="ph" style="padding-top:18px;border-top:1px solid var(--ln)"><span class="meta">${t}</span></div>`;
 function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='now'),R=all.filter(e=>e.b=='rem'),
  tk_=X.tar.filter(t=>!t.ok&&(!t.data||diff(t.data,T)<=0)).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),
  N=A.length+tk_.length,late=A.filter(e=>e.b=='late').length+tk_.filter(t=>t.data&&diff(t.data,T)<0).length,
- rt=A.filter(e=>e.kind=='ret'),rl=rt.filter(e=>e.b=='late').length,
+ rt=A.filter(e=>e.kind=='ret'),rl=rt.filter(e=>e.b=='late').length,PF=retsF(),
  ex=X.est.filter(s=>+s.qtd>0&&s.val&&diff(s.val,T)<=30).sort((a,b)=>a.val.localeCompare(b.val)),
  wk=X.pos.filter(p=>p.data&&p.st!='publicado'&&diff(p.data,T)>=0&&diff(p.data,T)<=7),
  up=[...all.filter(e=>e.b=='up'&&e.days>0&&e.days<=7).map(e=>({k:e.kind=='enc'?'retorno agendado':'lembrete',n:e.l+' · '+e.p.nome,d:e.due})),
@@ -386,13 +387,13 @@ function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='no
  pr=wk.filter(p=>p.st=='pronto').length;
  return`<div class="top"><div><div class="eyebrow">${dt}</div><h1>${g}, Amanda.<br><span class="s">${fr}</span></h1></div>${B('+ Nova tarefa',"go('tar');setTimeout(()=>$('#nt').focus())")}</div>
  <section class="cards" aria-label="Resumo">
- <div class="card glass c1"><small>Retornos para agendar</small><span class="n">${rt.length}</span><span class="ft ${rl?'wn':''}">${rt.length?(rl?rl+' atrasado'+(rl>1?'s':'')+' · ':'')+esc(rt.map(e=>e.p.nome.split(' ')[0]).slice(0,3).join(', ')):'ninguém para agendar agora'}</span></div>
+ <div class="card glass c1"><small>Retornos para agendar</small><span class="n">${rt.length}</span><span class="ft ${rl?'wn':''}">${rt.length?(rl?rl+' atrasado'+(rl>1?'s':'')+' · ':'')+esc(rt.map(e=>e.p.nome.split(' ')[0]).slice(0,3).join(', ')):'ninguém urgente'}${PF.length?` · +${PF.length} pendente${PF.length>1?'s':''} no prazo`:''}</span></div>
  <div class="card glass"><small>Pendências hoje</small><span class="n">${N}</span><span class="ft ${late?'wn':''}">${late?late+' atrasada'+(late>1?'s':''):'tudo em dia'}</span></div>
  <div class="card glass"><small>Amostras a vencer · 30d</small><span class="n">${ex.length}</span><span class="ft">${(v=>v?v+' vencida'+(v>1?'s':'')+' · '+(ex.length-v)+' a vencer':ex.length?'a primeira em '+diff(ex[0].val,T)+' dias':'nada vencendo')(ex.filter(x=>diff(x.val,T)<0).length)}</span></div>
  <div class="card glass"><small>Posts na semana</small><span class="n">${wk.length}</span><span class="ft">${wk.length?pr+' pronto'+(pr==1?'':'s')+' · '+(wk.length-pr)+' em andamento':'nada agendado'}</span></div></section>
  <div class="duo"><section class="panel" aria-label="Precisa da minha atenção"><div class="ph"><h2>Precisa da minha atenção</h2><span class="mu">${N} ite${N==1?'m':'ns'}</span></div>
  ${A.map(ev).join('')}${tk_.map(t=>`<div class="row"><div class="who"><div class="nm"><span class="dot task"></span>${esc(t.txt)}</div><div class="sub">Tarefa · ${t.data?when(t.data):'sem data'}</div></div><span class="chip">Tarefa</span><div class="acts">${B('Feita',`tk('${t.id}')`)}</div></div>`).join('')}${N?'':'<div class="empty">Nada pendente agora.</div>'}
- ${R.length?`<div class="ph" style="padding-top:18px;border-top:1px solid var(--ln)"><span class="meta">Lembretes de hoje</span></div>${R.map(ev).join('')}`:''}</section>
+ ${PF.length?sub2('Agendamento pendente · ainda no prazo')+PF.map(ev).join(''):''}${R.length?sub2('Lembretes de hoje')+R.map(ev).join(''):''}</section>
  <section class="panel soft" aria-label="Próximos 7 dias"><div class="ph"><h2>Próximos 7 dias</h2></div>
  ${up.length?up.map(x=>{const d=D(x.d);return`<div class="tl"><div class="d"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${MES[d.getMonth()]}</span></div><div class="t"><span>${esc(x.n)}</span><span class="meta">${esc(x.k)} · ${when(x.d)}</span></div></div>`}).join(''):'<div class="empty">Nada previsto.</div>'}</section></div>`}
 function vPac(){const n=k=>db.filter(p=>match(p,k)).length,q=key(qs);
@@ -403,9 +404,9 @@ function vPac(){const n=k=>db.filter(p=>match(p,k)).length,q=key(qs);
  ${L.map(p=>{const l=last(p),x=nxt(p);return`<tr class="cl" onclick="hist('${p.id}')"><td><b>${esc(p.nome)}</b></td><td class="mu nw">${br(l.date)}</td><td>${l.id?tl(l):'—'}</td><td class="mu">${l.glp||'—'}</td><td>${x?`<span class="dl"><span class="dot ${x.b=='late'?'late':x.b=='now'?'':'far'}"></span>${x.l}</span>`:'<span class="mu">—</span>'}</td><td class="nw ${x&&x.b=='late'?'wn':'mu'}">${x?sh(x.due):'—'}</td><td><span class="chip ${p.status=='Ativo'?'ok':''}">${p.status}</span></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Nenhum paciente encontrado.</td></tr>'}
  </tbody></table></div><div class="mu foot">Importar CSV de pacientes — colunas: nome, data consulta, tipo, glp1, entrega, próxima, status</div>`}
 function vTar(){const row=t=>`<div class="tr"><input type="checkbox" aria-label="Concluir tarefa" ${t.ok?'checked':''} onchange="tk('${t.id}')"><span class="${t.ok?'dn':''}">${esc(t.txt)}</span><span class="mu nw">${t.data?(!t.ok&&diff(t.data,T)<0?'<b class="wn">atrasada</b> ':'')+sh(t.data):''}</span><button type="button" class="btn q" aria-label="Excluir tarefa" onclick="rm('tar','${t.id}')">✕</button></div>`;
- const P_=X.tar.filter(t=>!t.ok).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),Dn=X.tar.filter(t=>t.ok),rt=rets().sort((a,b)=>a.due.localeCompare(b.due)),n=P_.length+rt.length;
+ const P_=X.tar.filter(t=>!t.ok).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),Dn=X.tar.filter(t=>t.ok),rt=rets().sort((a,b)=>a.due.localeCompare(b.due)),PF=retsF(),n=P_.length+rt.length+PF.length;
  return`<div class="top"><div><div class="eyebrow">${n} pendente${n==1?'':'s'}</div><h1>Minhas tarefas</h1></div></div>
- ${rt.length?`<div class="panel" style="margin-bottom:18px"><div class="ph"><h2>Agendar retornos</h2><span class="mu">${rt.length} paciente${rt.length==1?'':'s'}</span></div>${rt.map(ev).join('')}</div>`:''}
+ ${rt.length+PF.length?`<div class="panel" style="margin-bottom:18px"><div class="ph"><h2>Agendar retornos</h2><span class="mu">${rt.length+PF.length} paciente${rt.length+PF.length==1?'':'s'}</span></div>${rt.map(ev).join('')}${PF.length?sub2('Ainda no prazo')+PF.map(ev).join(''):''}</div>`:''}
  <div class="addt"><input type="text" id="nt" placeholder="Nova tarefa…" aria-label="Nova tarefa" onkeydown="if(event.key=='Enter')addT()"><input type="date" id="nd" value="${T}" aria-label="Data da tarefa">${B('Adicionar','addT()','pri')}</div>
  <div class="panel">${P_.map(row).join('')||'<div class="empty">Nenhuma tarefa pendente.</div>'}</div>${Dn.length?`<h3 class="sec">Concluídas</h3><div class="panel soft">${Dn.map(row).join('')}</div>`:''}`}
 function vPos(){const L=[...X.pos].sort((a,b)=>(a.data||'9').localeCompare(b.data||'9'));

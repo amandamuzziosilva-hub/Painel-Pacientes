@@ -123,7 +123,7 @@ let db=[],X={tar:[],pos:[],est:[],cup:[],opt:[]},view='hoje',flt='todos',qs='',e
 const PS=['Ativo','Pausado','Alta','Não vai retornar'],PST=['ideia','produzindo','pronto','publicado'];
 // regras de acompanhamento
 const INT=60,LIM_MESES=7,ENC=3;
-const FL={todos:'Todos',acao:'Precisa de ação',d60:'60 dias',msg:'Mensagem 15 dias',chk:'Check-in 30 dias',prox:'Encontro definido',ciclo:'Em ciclo',avulsa:'Avulsa',glp:'GLP-1',pausado:'Pausados',ativos:'Ativos',up:'Próximos 7 dias'};
+const FL={todos:'Todos',acao:'Precisa de ação',agendar:'Agendar retorno',semag:'Sem retorno agendado',agend:'Retorno agendado',ciclo:'Em ciclo',avulsa:'Avulsa',glp:'GLP-1',pausado:'Pausados',ativos:'Ativos'};
 function toast(m,e){const t=$('#t');t.textContent=m;t.className='s'+(e?' err':'');clearTimeout(t.h);t.h=setTimeout(()=>t.className='',3400)}
 const rr=id=>{render();const x=$('#'+id);if(x){x.focus();const n=x.value.length;try{x.setSelectionRange(n,n)}catch(e){}}};
 // ---- armazenamento (Google Sheets via Apps Script)
@@ -169,7 +169,10 @@ function rest(file){if(!file)return;file.text().then(t=>{let j;try{j=JSON.parse(
  db=mg(db,j.pac);COLS.forEach(k=>X[k]=mg(X[k]||[],j[k]));norm();cl();render();
  post({action:'bulk',col:'pac',items:db});COLS.forEach(k=>bulk(k))})}
 // ---- regras dos pacientes
-// Intervalo base de 60 dias desde a ÚLTIMA consulta (avulsa ou ciclo). Ciclo = 3 encontros, até 7 meses a partir do 1º.
+// Cada consulta registrada gera um retorno previsto para 60 dias depois. A paciente fica com "agendamento pendente"
+// até a Amanda marcar a data agendada (campo proxima). O aviso para agendar aparece 30 dias antes dos 60 dias.
+// Mensagem de 15 dias e check-in de 30 dias são só lembretes (sem marcar). Ciclo = 3 encontros, até 7 meses a partir do 1º.
+const AVISO=30;
 const addM=(s,n)=>{const d=D(s);d.setMonth(d.getMonth()+n);return f(d)};
 const TL={Avulsa:'Consulta avulsa / inicial',Retorno:'Retorno',Ciclo:'Ciclo de acompanhamento',Plano:'Plano (antigo)'};
 const tl=c=>c.tipo=='Ciclo'?`Ciclo · encontro ${+c.enc||1}/${ENC}`:(TL[c.tipo]||c.tipo||'—');
@@ -177,72 +180,81 @@ const last=p=>[...p.consults].sort((a,b)=>b.date.localeCompare(a.date))[0]||{};
 function ciclo(p){const l=last(p);if(l.tipo!='Ciclo')return null;
  const ini=[...p.consults].filter(c=>c.tipo=='Ciclo'&&(+c.enc||1)==1&&c.date<=l.date).sort((a,b)=>b.date.localeCompare(a.date))[0]||l;
  return{ini:ini.date,fim:addM(ini.date,LIM_MESES),n:+l.enc||1}}
-function E(p,c,kind,due,x){const days=diff(due,T),em=days<0?`há ${-days} dias`:days==0?'hoje':`em ${days} dias`;let b,l;
- if(kind=='msg'||kind=='chk'){b=days<=0?'now':days<=7?'up':'far';l=(kind=='msg'?'Mensagem de 15 dias':'Check-in de 30 dias')+(days<=0?' pendente':'')}
- else if(kind=='d60'){b=days<0?'late':days==0?'now':days<=7?'up':'far';l=days<0?`60 dias completos ${em}`:days==0?'Completa 60 dias hoje':`Completa 60 dias ${em}`;if(c.proxima&&c.proxima>=T)l+=` · próximo encontro em ${br(c.proxima)}`}
- else if(kind=='enc'){b=days<0?'late':days<=7?'up':'far';l=days<0?'Encontro previsto não registrado':'Encontro previsto'}
- else if(kind=='cic'){b=days<0?'late':days<=30?'now':'far';l=(days<0?'Ciclo vencido':'Ciclo vence '+em)+` · ${x.n} de ${ENC} encontros`}
+function E(p,c,kind,due,x){const days=diff(due,T);let b,l;
+ if(kind=='ret'){b=days<0?'late':days<=AVISO?'now':'far';l='Contato para agendar o retorno'}
+ else if(kind=='msg'||kind=='chk'){b=days==0?'rem':'up';l=kind=='msg'?'Mensagem de 15 dias':'Check-in de 30 dias'}
+ else if(kind=='enc'){b=days<0?'late':days<=7?'up':'far';l=days<0?'Consulta agendada ainda não registrada':'Retorno agendado'}
+ else if(kind=='cic'){b=days<0?'late':days<=30?'now':'far';l=(days<0?'Ciclo vencido':'Prazo do ciclo')+` · ${x.n} de ${ENC} encontros`}
  else{b='now';l='3º encontro: decidir próximo passo (renovar ou encerrar)'}
- return{p,c,kind,due,days,b,l,r:{late:0,now:1,up:2,far:3}[b]}}
+ return{p,c,kind,due,days,b,l,r:{late:0,now:1,rem:2,up:3,far:4}[b]}}
 function evs(p){const o=[];if(p.status!='Ativo')return o;
- p.consults.forEach(c=>{if(c.entrega&&!c.msg)o.push(E(p,c,'msg',add(c.entrega,15)));if(!c.chk)o.push(E(p,c,'chk',add(c.date,30)))});
- const l=last(p);if(l.id){
-  if(!l.ok60)o.push(E(p,l,'d60',add(l.date,INT)));
-  if(l.proxima&&l.proxima>l.date)o.push(E(p,l,'enc',l.proxima));
-  const cy=ciclo(p);if(cy){if(cy.n<ENC)o.push(E(p,l,'cic',cy.fim,cy));else if(!l.dec)o.push(E(p,l,'dec',l.date))}}
+ p.consults.forEach(c=>{[['msg',c.entrega&&add(c.entrega,15)],['chk',c.date&&add(c.date,30)]].forEach(([k,d])=>{if(d){const n=diff(d,T);if(n>=0&&n<=7)o.push(E(p,c,k,d))}})});
+ const l=last(p);if(l.id){const cy=ciclo(p),fim=cy&&cy.n>=ENC;
+  if(fim&&!l.dec)o.push(E(p,l,'dec',l.date));
+  else if(!(fim&&l.dec=='Encerrar')){if(l.proxima)o.push(E(p,l,'enc',l.proxima));else o.push(E(p,l,'ret',add(l.date,INT)))}
+  if(cy&&!fim)o.push(E(p,l,'cic',cy.fim,cy))}
  return o.sort((a,b)=>a.r-b.r||a.due.localeCompare(b.due))}
-const nxt=p=>evs(p).filter(e=>e.b!='far').sort((a,b)=>a.due.localeCompare(b.due))[0]||evs(p).sort((a,b)=>a.due.localeCompare(b.due))[0];
+// próximo passo da paciente (coluna da aba Pacientes)
+function step(p){if(p.status!='Ativo')return null;const e=evs(p).filter(x=>['dec','ret','enc'].includes(x.kind))[0];if(!e)return null;
+ const t=e.kind=='dec'?'Decidir: renovar ou encerrar o ciclo':e.kind=='enc'?(e.b=='late'?'Consulta de '+sh(e.due)+' não registrada':'Retorno agendado'):e.b=='late'?'Atrasado: agendar retorno':e.b=='now'?'Agendar retorno':'Agendamento pendente';
+ return{e,t,d:e.kind=='dec'?e.c.date:e.due}}
+const nxt=p=>{const s=step(p);return s?{l:s.t,due:s.d,b:s.e.b}:null};
 function match(p,k){const e=evs(p),hot=x=>x.b=='late'||x.b=='now',l=last(p),at=p.status=='Ativo';
- return{todos:1,acao:e.some(hot),d60:e.some(x=>x.kind=='d60'&&hot(x)),msg:e.some(x=>x.kind=='msg'&&hot(x)),chk:e.some(x=>x.kind=='chk'&&hot(x)),prox:at&&!!l.proxima&&l.proxima>=T,ciclo:at&&l.tipo=='Ciclo',avulsa:at&&!!l.id&&l.tipo!='Ciclo',glp:at&&l.glp=='Sim',pausado:p.status=='Pausado',ativos:at,up:e.some(x=>x.b=='up')}[k]}
+ return{todos:1,acao:e.some(hot),agendar:e.some(x=>x.kind=='ret'&&hot(x)),semag:e.some(x=>x.kind=='ret'),agend:e.some(x=>x.kind=='enc'),ciclo:at&&l.tipo=='Ciclo',avulsa:at&&!!l.id&&l.tipo!='Ciclo',glp:at&&l.glp=='Sim',pausado:p.status=='Pausado',ativos:at}[k]}
 // ---- ações dos pacientes
 function P(id){return db.find(p=>p.id==id)}function C(p,id){return p.consults.find(c=>c.id==id)}
-function tog(pid,cid,fl){const p=P(pid),c=C(p,cid);c[fl]=!c[fl];save(p);render();hist(pid)}
-function quick(pid,cid,fl){const p=P(pid);C(p,cid)[fl]=true;save(p);render()}
-function prox(pid,cid){const p=P(pid),c=C(p,cid);
- $('#m').innerHTML=`<div class="ov"><div class="md"><h2>Próximo encontro — ${esc(p.nome)}</h2><div class="mu">Última consulta em ${br(c.date)}. O aviso de 60 dias (${br(add(c.date,INT))}) continua valendo.</div><label>Data do próximo encontro</label><input type="date" id="px" value="${c.proxima||add(c.date,INT)}"><div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between"><span>${c.proxima?`<button class="btn" onclick="doProx('${pid}','${cid}',1)">Remover data</button>`:''}</span><span style="display:flex;gap:8px"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="doProx('${pid}','${cid}')">Salvar</button></span></div></div></div>`}
-function doProx(pid,cid,rmv){const p=P(pid),c=C(p,cid);c.proxima=rmv?'':$('#px').value;save(p);cl();render()}
+function agd(pid,cid){const p=P(pid),c=C(p,cid);
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h2>Retorno agendado — ${esc(p.nome)}</h2><button type="button" class="x" aria-label="Fechar" onclick="cl()">✕</button>
+ <p class="mu lead">Última consulta em ${br(c.date)}. Os 60 dias se completam em ${br(add(c.date,INT))}.</p>
+ <label for="px">Data agendada da próxima consulta</label><input type="date" id="px" value="${c.proxima||''}">
+ <div class="acts sp"><span>${c.proxima?B('Remover agendamento',`doAgd('${pid}','${cid}',1)`):''}</span><span class="acts">${B('Cancelar','cl()')}${B('Salvar',`doAgd('${pid}','${cid}')`,'pri')}</span></div></div></div>`;$('#px').focus()}
+function doAgd(pid,cid,rmv){const p=P(pid),c=C(p,cid),d=rmv?'':$('#px').value;if(!rmv&&!d)return toast('Informe a data agendada','err');
+ if(d&&d<c.date)return toast('A data agendada precisa ser depois da última consulta','err');
+ c.proxima=d;save(p);cl();render();toast(rmv?'Agendamento removido':'Retorno agendado para '+br(d)+' ✓')}
 function dec(pid,cid,v){const p=P(pid),c=C(p,cid);
  if(v=='Encerrar'){if(!confirm('Encerrar o acompanhamento? O status da paciente passa para "Alta" e os avisos param.'))return;p.status='Alta'}
- c.dec=v;save(p);cl();render();toast(v=='Renovar'?'Renovação registrada. Na próxima consulta, marque Ciclo · encontro 1.':'Acompanhamento encerrado ✓')}
+ c.dec=v;save(p);cl();render();toast(v=='Renovar'?'Renovação registrada. Marque a data do próximo encontro em "Agendado".':'Acompanhamento encerrado ✓')}
 const cl=()=>$('#m').innerHTML='';
 function del(pid){if(!confirm('Excluir este paciente e todo o histórico? Não dá para desfazer.'))return;db=db.filter(p=>p.id!=pid);post({action:'del',col:'pac',id:pid});cl();render()}
 function delC(pid,cid){if(!confirm('Excluir esta consulta?'))return;const p=P(pid);p.consults=p.consults.filter(c=>c.id!=cid);save(p);render();hist(pid)}
 function abrirForm(pid,cid){const p=pid?P(pid):null,ed=!p||cid;let c=cid?C(p,cid):{};
- if(!cid&&p){const pl=last(p);c=pl.tipo=='Ciclo'&&(+pl.enc||1)<ENC&&!pl.dec?{tipo:'Ciclo',enc:(+pl.enc||1)+1}:pl.tipo=='Ciclo'?{tipo:'Ciclo',enc:1}:{}}
+ if(!cid&&p){const pl=last(p);c=pl.tipo=='Ciclo'&&(+pl.enc||1)<ENC&&pl.dec!='Renovar'?{tipo:'Ciclo',enc:(+pl.enc||1)+1}:pl.tipo=='Ciclo'?{tipo:'Ciclo',enc:1}:{}}
  const tps=['Avulsa','Retorno','Ciclo'].concat(c.tipo=='Plano'?['Plano']:[]),isC=c.tipo=='Ciclo';
- $('#m').innerHTML=`<div class="ov"><div class="md"><h2>${!p?'Novo paciente':cid?'Editar consulta':'Nova consulta — '+esc(p.nome)}</h2>
- ${ed?`<label>Nome</label><input id="f1" value="${esc(p?p.nome:'')}"><label>Status do paciente</label><select id="f2">${PS.map(s=>`<option ${p&&p.status==s?'selected':''}>${s}</option>`).join('')}</select>`:''}
- <div class="g2"><div><label>Data da consulta</label><input type="date" id="f3" value="${c.date||T}" onchange="if(!$('#f5').dataset.u)$('#f5').value=this.value"></div>
- <div><label>Tipo de atendimento</label><select id="f4" onchange="$('#fe').style.display=this.value=='Ciclo'?'':'none'">${tps.map(s=>`<option value="${s}" ${c.tipo==s?'selected':''}>${TL[s]}</option>`).join('')}</select></div>
- <div id="fe" style="display:${isC?'':'none'}"><label>Encontro do ciclo</label><select id="f9">${[1,2,3].map(n=>`<option value="${n}" ${(+c.enc||1)==n?'selected':''}>${n}º encontro${n==1?' (início do ciclo)':n==ENC?' (último)':''}</option>`).join('')}</select></div>
- <div><label>Data de entrega do plano</label><input type="date" id="f5" value="${c.entrega||(cid?'':T)}" oninput="this.dataset.u=1"></div>
- <div><label>Em tratamento com GLP-1?</label><select id="f6"><option>Não</option><option ${c.glp=='Sim'?'selected':''}>Sim</option></select></div></div>
- <label>Próximo encontro (opcional — você define caso a caso)</label><input type="date" id="f7" value="${c.proxima||''}">
- <label>Observações</label><textarea id="f8" rows="3">${esc(c.obs)}</textarea>
- <div class="mu" style="margin-top:8px">Mensagem de 15 dias, check-in de 30 dias e aviso de 60 dias desde a última consulta são calculados automaticamente. No ciclo, o prazo é de ${LIM_MESES} meses a partir do 1º encontro.</div>
- <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="cl()">Cancelar</button><button class="btn pri" onclick="sv('${pid||''}','${cid||''}')">Salvar</button></div></div></div>`}
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h2>${!p?'Novo paciente':cid?'Editar consulta':'Nova consulta — '+esc(p.nome)}</h2><button type="button" class="x" aria-label="Fechar" onclick="cl()">✕</button>
+ ${ed?`<div class="g2"><div class="full"><label for="f1">Nome</label><input id="f1" value="${esc(p?p.nome:'')}"></div><div><label for="f2">Status do paciente</label><select id="f2">${PS.map(s=>`<option ${p&&p.status==s?'selected':''}>${s}</option>`).join('')}</select></div></div>`:''}
+ <div class="g2"><div><label for="f3">Data da consulta</label><input type="date" id="f3" value="${c.date||T}" onchange="if(!$('#f5').dataset.u)$('#f5').value=this.value"></div>
+ <div><label for="f4">Tipo de atendimento</label><select id="f4" onchange="$('#fe').style.display=this.value=='Ciclo'?'':'none'">${tps.map(s=>`<option value="${s}" ${c.tipo==s?'selected':''}>${TL[s]}</option>`).join('')}</select></div>
+ <div id="fe" style="display:${isC?'':'none'}"><label for="f9">Encontro do ciclo</label><select id="f9">${[1,2,3].map(n=>`<option value="${n}" ${(+c.enc||1)==n?'selected':''}>${n}º encontro${n==1?' (início do ciclo)':n==ENC?' (último)':''}</option>`).join('')}</select></div>
+ <div><label for="f5">Data de entrega do plano</label><input type="date" id="f5" value="${c.entrega||(cid?'':T)}" oninput="this.dataset.u=1"></div>
+ <div><label for="f6">Em tratamento com GLP-1?</label><select id="f6"><option>Não</option><option ${c.glp=='Sim'?'selected':''}>Sim</option></select></div>
+ <div><label for="f7">Retorno já agendado para (opcional)</label><input type="date" id="f7" value="${c.proxima||''}"></div></div>
+ <label for="f8">Observações</label><textarea id="f8" rows="3">${esc(c.obs)}</textarea>
+ <p class="mu">O retorno é previsto para 60 dias depois da consulta e fica como <b>agendamento pendente</b> até você informar a data agendada. O aviso para entrar em contato aparece 30 dias antes.${isC||!cid?` No ciclo, o prazo é de ${LIM_MESES} meses a partir do 1º encontro.`:''}</p>
+ <div class="acts sp"><span></span><span class="acts">${B('Cancelar','cl()')}${B('Salvar',`sv('${pid||''}','${cid||''}')`,'pri')}</span></div></div></div>`}
 function sv(pid,cid){const nome=$('#f1')?$('#f1').value.trim():'';if($('#f1')&&!nome)return toast('Informe o nome','err');
  if(!$('#f3').value)return toast('Informe a data da consulta','err');
+ if($('#f7').value&&$('#f7').value<=$('#f3').value)return toast('O retorno agendado precisa ser depois da data da consulta','err');
  let p=pid?P(pid):{id:uid(),nome,status:'Ativo',consults:[]};if(!pid)db.push(p);
  if($('#f1')){p.nome=nome;p.status=$('#f2').value}
- let c=cid?C(p,cid):{id:uid(),msg:false,chk:false};if(!cid)p.consults.push(c);
+ let c=cid?C(p,cid):{id:uid()};if(!cid)p.consults.push(c);
  const tipo=$('#f4').value;
  Object.assign(c,{date:$('#f3').value,tipo,enc:tipo=='Ciclo'?+$('#f9').value:'',entrega:$('#f5').value,glp:$('#f6').value,proxima:$('#f7').value,obs:$('#f8').value});
- save(p);cl();render()}
+ ['msg','chk','ok60'].forEach(k=>delete c[k]);save(p);cl();render()}
 function hist(pid){const p=P(pid);if(!p)return;const cs=[...p.consults].sort((a,b)=>b.date.localeCompare(a.date)),L=last(p),cy=ciclo(p);
- const pend=(ok,t)=>`<span class="b ${ok?'ok':'sched'}">${ok?t[0]:t[1]}</span>`;
- const extra=c=>c.id!=L.id?'':`<div class="ln"><span>60 dias desde esta consulta: ${br(add(c.date,INT))} ${pend(c.ok60,['Contato feito','Pendente'])}</span><button class="btn" onclick="tog('${pid}','${c.id}','ok60')">${c.ok60?'Desfazer':'✓ Contato feito'}</button></div>
- <div class="ln"><span>Próximo encontro: ${c.proxima?br(c.proxima):'não definido'}</span><button class="btn" onclick="prox('${pid}','${c.id}')">${c.proxima?'Alterar':'Definir'}</button></div>
- ${cy?`<div class="ln"><span>Ciclo iniciado em ${br(cy.ini)} · ${cy.n} de ${ENC} encontros · prazo até ${br(cy.fim)}</span></div>`:''}
- ${cy&&cy.n>=ENC?`<div class="ln"><span>Próximo passo: ${c.dec?pend(1,[c.dec=='Renovar'?'Renovar ciclo':'Encerrado']):pend(0,['','A decidir'])}</span><span style="display:flex;gap:6px"><button class="btn" onclick="dec('${pid}','${c.id}','Renovar')">Renovar</button><button class="btn" onclick="dec('${pid}','${c.id}','Encerrar')">Encerrar</button></span></div>`:''}`;
- $('#m').innerHTML=`<div class="ov"><div class="md"><div style="display:flex;justify-content:space-between;align-items:start"><div><h1 style="font-size:26px">${esc(p.nome)}</h1><span class="b">${p.status}</span></div><button class="btn" onclick="cl()">✕</button></div>
- <div style="margin:12px 0;display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri" onclick="abrirForm('${pid}')">+ Nova consulta</button>${L.id?`<button class="btn" onclick="abrirForm('${pid}','${L.id}')">Editar</button>`:''}<button class="btn" onclick="del('${pid}')">Excluir paciente</button></div>
- ${cs.map(c=>`<div class="cs"><div style="display:flex;justify-content:space-between;gap:8px"><div><strong>Consulta: ${br(c.date)}</strong><div class="mu">${tl(c)} · GLP-1: ${c.glp}</div></div><div><button class="btn" onclick="abrirForm('${pid}','${c.id}')">Editar</button> <button class="btn" onclick="delC('${pid}','${c.id}')">🗑</button></div></div>
- ${c.obs?`<div style="font-size:13px;margin:6px 0">${esc(c.obs)}</div>`:''}
- <div class="ln"><span>Plano entregue: ${br(c.entrega)}</span></div>
- ${c.entrega?`<div class="ln"><span>Mensagem 15 dias: ${br(add(c.entrega,15))} ${pend(c.msg,['Enviada','Pendente'])}</span><button class="btn" onclick="tog('${pid}','${c.id}','msg')">${c.msg?'Desfazer':'✓ Enviada'}</button></div>`:''}
- <div class="ln"><span>Check-in 30 dias: ${br(add(c.date,30))} ${pend(c.chk,['Realizado','Pendente'])}</span><button class="btn" onclick="tog('${pid}','${c.id}','chk')">${c.chk?'Desfazer':'✓ Realizado'}</button></div>
- ${extra(c)}</div>`).join('')}</div></div>`}
+ const st=(c,i)=>{if(c.id!=L.id){const nx=cs[i-1];return`<span class="b ok">Retorno registrado em ${sh(nx.date)}</span>`}
+  if(p.status!='Ativo')return`<span class="b">${p.status}</span>`;
+  if(cy&&cy.n>=ENC&&c.dec=='Encerrar')return'<span class="b">Ciclo encerrado</span>';
+  if(c.proxima)return`<span class="b ok">Agendado para ${br(c.proxima)}</span>`;
+  const n=diff(add(c.date,INT),T);return`<span class="b ${n<0?'late':'sched'}">${n<0?'Atrasado · agendamento pendente':'Agendamento pendente'}</span>`};
+ $('#m').innerHTML=`<div class="ov"><div class="md"><h1>${esc(p.nome)}</h1><button type="button" class="x" aria-label="Fechar" onclick="cl()">✕</button><span class="b">${p.status}</span>
+ <div class="acts" style="margin:14px 0 6px">${B('+ Nova consulta',`abrirForm('${pid}')`,'pri')}${L.id&&p.status=='Ativo'?B(L.proxima?'Alterar data agendada':'Marcar retorno agendado',`agd('${pid}','${L.id}')`):''}${B('Excluir paciente',`del('${pid}')`)}</div>
+ ${cy?`<div class="mu">Ciclo iniciado em ${br(cy.ini)} · ${cy.n} de ${ENC} encontros · prazo até ${br(cy.fim)}</div>`:''}
+ ${cs.map((c,i)=>`<div class="cs"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><strong>Consulta: ${br(c.date)}</strong><div class="mu">${tl(c)} · GLP-1: ${c.glp||'—'}</div></div><div class="acts">${B('Editar',`abrirForm('${pid}','${c.id}')`,'q')}<button type="button" class="btn q" aria-label="Excluir consulta" onclick="delC('${pid}','${c.id}')">Excluir</button></div></div>
+ ${c.obs?`<div style="font-size:13.5px;margin:8px 0">${esc(c.obs)}</div>`:''}
+ <div class="ln"><span>Retorno (60 dias): ${br(add(c.date,INT))}</span>${st(c,i)}</div>
+ ${c.entrega?`<div class="ln"><span class="mu">Plano entregue: ${br(c.entrega)} · mensagem de 15 dias: ${br(add(c.entrega,15))}</span></div>`:''}
+ <div class="ln"><span class="mu">Check-in de 30 dias: ${br(add(c.date,30))}</span></div>
+ ${c.id==L.id&&cy&&cy.n>=ENC&&p.status=='Ativo'?`<div class="ln"><span>Próximo passo do ciclo: ${c.dec?`<span class="b ok">${c.dec=='Renovar'?'Renovar ciclo':'Encerrado'}</span>`:'<span class="b sched">A decidir</span>'}</span><span class="acts">${B('Renovar',`dec('${pid}','${c.id}','Renovar')`,'q')}${B('Encerrar',`dec('${pid}','${c.id}','Encerrar')`,'q')}</span></div>`:''}</div>`).join('')}</div></div>`}
 // ---- planilhas (CSV)
 function csvP(t){t=t.replace(/^﻿/,'');const h=t.split(/\r?\n/)[0],sep=(h.match(/;/g)||[]).length>(h.match(/,/g)||[]).length?';':',';
  const R=[];let row=[],c='',q=false;
@@ -348,49 +360,52 @@ const tags=s=>(s||'').split(',').map(x=>x.trim()).filter(Boolean).map(x=>`<span 
 function go(k){view=k;if(k=='pac')flt='todos';render();scrollTo(0,0)}
 const when=d=>{const n=diff(d,T);return n==0?'hoje':n<0?`<span class="wn">atrasada ${-n}d</span>`:'em '+n+'d'};
 function ev(e){const pi=e.p.id,ci=e.c.id;
- const a={msg:B('Marcar como enviada',`quick('${pi}','${ci}','msg')`,'pri'),chk:B('Check-in realizado',`quick('${pi}','${ci}','chk')`,'pri'),
-  d60:B('Contato feito',`quick('${pi}','${ci}','ok60')`,'pri')+B('Próximo encontro',`prox('${pi}','${ci}')`)+B('Nova consulta',`abrirForm('${pi}')`),
-  enc:B('Registrar consulta',`abrirForm('${pi}')`,'pri')+B('Alterar data',`prox('${pi}','${ci}')`),
+ const a={ret:B('Agendado',`agd('${pi}','${ci}')`,'pri'),msg:'',chk:'',
+  enc:B('Registrar consulta',`abrirForm('${pi}')`,'pri')+B('Alterar data',`agd('${pi}','${ci}')`),
   cic:B('Ver paciente',`hist('${pi}')`,'pri'),
   dec:B('Renovar',`dec('${pi}','${ci}','Renovar')`,'pri')+B('Encerrar',`dec('${pi}','${ci}','Encerrar')`)}[e.kind];
  const t=e.days<0?`há ${-e.days} dias`:e.days==0?'hoje':`em ${e.days} dias`,
-  rot={msg:'15 dias',chk:'30 dias',d60:'60 dias',enc:'Encontro',cic:'Ciclo',dec:'Ciclo 3/3'}[e.kind],
-  ex={msg:'prazo '+br(e.due),chk:'prazo '+br(e.due),d60:'última consulta em '+sh(e.c.date),enc:br(e.due)+' ('+t+')',cic:'prazo '+br(e.due),dec:'3º encontro em '+sh(e.c.date)}[e.kind];
- return`<div class="row"><div class="who"><div class="nm"><span class="dot ${e.b=='late'?'late':''}"></span><button type="button" class="lk" onclick="hist('${pi}')">${esc(e.p.nome)}</button></div><div class="sub">${e.l} · ${ex}</div></div><span class="chip ${e.b=='late'?'late':''}">${e.b=='late'?'Atrasado':rot}</span><div class="acts">${a}</div></div>`}
+  rot={ret:'Agendar',msg:'Lembrete',chk:'Lembrete',enc:'Consulta',cic:'Ciclo',dec:'Ciclo 3/3'}[e.kind],
+  ex={ret:`prazo ${sh(e.due)} · ${e.days<0?`atrasado há ${-e.days} dia${e.days==-1?'':'s'}`:e.days==0?'vence hoje':`faltam ${e.days} dia${e.days==1?'':'s'}`} · consulta em ${sh(e.c.date)}`,
+   msg:'hoje · plano entregue em '+sh(e.c.entrega),chk:'hoje · consulta em '+sh(e.c.date),enc:br(e.due)+' ('+t+')',cic:'prazo até '+br(e.due),dec:'3º encontro em '+sh(e.c.date)}[e.kind];
+ return`<div class="row"><div class="who"><div class="nm"><span class="dot ${e.b=='late'?'late':e.b=='rem'?'far':''}"></span><button type="button" class="lk" onclick="hist('${pi}')">${esc(e.p.nome)}</button></div><div class="sub">${e.l} · ${ex}</div></div><span class="chip ${e.b=='late'?'late':e.kind=='ret'?'warn':''}">${e.b=='late'?'Atrasado':rot}</span>${a?`<div class="acts">${a}</div>`:''}</div>`}
 const EXT=['Nenhuma','Uma','Duas','Três','Quatro','Cinco','Seis','Sete','Oito','Nove','Dez'];
-function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='now'),
+const rets=()=>db.flatMap(evs).filter(e=>e.kind=='ret'&&(e.b=='late'||e.b=='now'));
+function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='now'),R=all.filter(e=>e.b=='rem'),
  tk_=X.tar.filter(t=>!t.ok&&(!t.data||diff(t.data,T)<=0)).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),
  N=A.length+tk_.length,late=A.filter(e=>e.b=='late').length+tk_.filter(t=>t.data&&diff(t.data,T)<0).length,
- d6=A.filter(e=>e.kind=='d60'),
+ rt=A.filter(e=>e.kind=='ret'),rl=rt.filter(e=>e.b=='late').length,
  ex=X.est.filter(s=>+s.qtd>0&&s.val&&diff(s.val,T)<=30).sort((a,b)=>a.val.localeCompare(b.val)),
  wk=X.pos.filter(p=>p.data&&p.st!='publicado'&&diff(p.data,T)>=0&&diff(p.data,T)<=7),
- up=[...all.filter(e=>e.b=='up'&&e.days<=7).map(e=>({k:e.kind=='enc'?'encontro':'paciente',n:e.l.split(' · ')[0]+' · '+e.p.nome,d:e.due})),
+ up=[...all.filter(e=>e.b=='up'&&e.days>0&&e.days<=7).map(e=>({k:e.kind=='enc'?'retorno agendado':'lembrete',n:e.l+' · '+e.p.nome,d:e.due})),
   ...X.tar.filter(t=>!t.ok&&t.data&&diff(t.data,T)>0&&diff(t.data,T)<=7).map(t=>({k:'tarefa',n:t.txt,d:t.data})),
-  ...wk.map(p=>({k:'post · '+p.st,n:p.fmt+' · '+p.tema,d:p.data}))].sort((a,b)=>a.d.localeCompare(b.d)),
+  ...wk.filter(p=>diff(p.data,T)>0).map(p=>({k:'post · '+p.st,n:p.fmt+' · '+p.tema,d:p.data}))].sort((a,b)=>a.d.localeCompare(b.d)),
  h=new Date().getHours(),g=h<5?'Boa noite':h<12?'Bom dia':h<18?'Boa tarde':'Boa noite',
  dt=(d=>d[0].toUpperCase()+d.slice(1))(new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})),
  fr=N==0?'Nada pede a sua atenção agora.':(N<=10?EXT[N]:N)+(N==1?' coisa pede':' coisas pedem')+' a sua atenção.',
  pr=wk.filter(p=>p.st=='pronto').length;
  return`<div class="top"><div><div class="eyebrow">${dt}</div><h1>${g}, Amanda.<br><span class="s">${fr}</span></h1></div>${B('+ Nova tarefa',"go('tar');setTimeout(()=>$('#nt').focus())")}</div>
  <section class="cards" aria-label="Resumo">
- <div class="card glass c1"><small>Pendências hoje</small><span class="n">${N}</span><span class="ft ${late?'wn':''}">${late?late+' atrasada'+(late>1?'s':''):'tudo em dia'}</span></div>
- <div class="card glass"><small>60 dias completos</small><span class="n">${d6.length}</span><span class="ft">${d6.length?esc(d6.map(e=>e.p.nome.split(' ')[0]).slice(0,3).join(', ')):'ninguém hoje'}</span></div>
+ <div class="card glass c1"><small>Retornos para agendar</small><span class="n">${rt.length}</span><span class="ft ${rl?'wn':''}">${rt.length?(rl?rl+' atrasado'+(rl>1?'s':'')+' · ':'')+esc(rt.map(e=>e.p.nome.split(' ')[0]).slice(0,3).join(', ')):'ninguém para agendar agora'}</span></div>
+ <div class="card glass"><small>Pendências hoje</small><span class="n">${N}</span><span class="ft ${late?'wn':''}">${late?late+' atrasada'+(late>1?'s':''):'tudo em dia'}</span></div>
  <div class="card glass"><small>Amostras a vencer · 30d</small><span class="n">${ex.length}</span><span class="ft">${(v=>v?v+' vencida'+(v>1?'s':'')+' · '+(ex.length-v)+' a vencer':ex.length?'a primeira em '+diff(ex[0].val,T)+' dias':'nada vencendo')(ex.filter(x=>diff(x.val,T)<0).length)}</span></div>
  <div class="card glass"><small>Posts na semana</small><span class="n">${wk.length}</span><span class="ft">${wk.length?pr+' pronto'+(pr==1?'':'s')+' · '+(wk.length-pr)+' em andamento':'nada agendado'}</span></div></section>
  <div class="duo"><section class="panel" aria-label="Precisa da minha atenção"><div class="ph"><h2>Precisa da minha atenção</h2><span class="mu">${N} ite${N==1?'m':'ns'}</span></div>
- ${A.map(ev).join('')}${tk_.map(t=>`<div class="row"><div class="who"><div class="nm"><span class="dot task"></span>${esc(t.txt)}</div><div class="sub">Tarefa · ${t.data?when(t.data):'sem data'}</div></div><span class="chip">Tarefa</span><div class="acts">${B('Feita',`tk('${t.id}')`)}</div></div>`).join('')}${N?'':'<div class="empty">Nada pendente agora.</div>'}</section>
+ ${A.map(ev).join('')}${tk_.map(t=>`<div class="row"><div class="who"><div class="nm"><span class="dot task"></span>${esc(t.txt)}</div><div class="sub">Tarefa · ${t.data?when(t.data):'sem data'}</div></div><span class="chip">Tarefa</span><div class="acts">${B('Feita',`tk('${t.id}')`)}</div></div>`).join('')}${N?'':'<div class="empty">Nada pendente agora.</div>'}
+ ${R.length?`<div class="ph" style="padding-top:18px;border-top:1px solid var(--ln)"><span class="meta">Lembretes de hoje</span></div>${R.map(ev).join('')}`:''}</section>
  <section class="panel soft" aria-label="Próximos 7 dias"><div class="ph"><h2>Próximos 7 dias</h2></div>
  ${up.length?up.map(x=>{const d=D(x.d);return`<div class="tl"><div class="d"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${MES[d.getMonth()]}</span></div><div class="t"><span>${esc(x.n)}</span><span class="meta">${esc(x.k)} · ${when(x.d)}</span></div></div>`}).join(''):'<div class="empty">Nada previsto.</div>'}</section></div>`}
 function vPac(){const n=k=>db.filter(p=>match(p,k)).length,q=key(qs);
- const L=db.filter(p=>match(p,flt)&&key(p.nome).includes(q)).sort((a,b)=>((nxt(a)||{due:'9'}).due).localeCompare((nxt(b)||{due:'9'}).due));
+ const L=db.filter(p=>match(p,flt)&&key(p.nome).includes(q)).sort((a,b)=>{const x=nxt(a),y=nxt(b),r=v=>!v?9:{late:0,now:1}[v.b]??2;return r(x)-r(y)||((x||{due:'9'}).due).localeCompare((y||{due:'9'}).due)});
  return`<div class="top"><div><div class="eyebrow">${n('ativos')} em acompanhamento</div><h1>Pacientes</h1></div><div class="acts">${impBtn('imp')}${B('+ Novo paciente','abrirForm()','pri')}</div></div>
  <div class="tools">${srch('q','Buscar paciente',qs,'qs')}${chips(FL,flt,'flt',n)}</div>
- <div class="panel"><table><thead><tr><th>Nome</th><th>Última consulta</th><th>Atendimento</th><th>GLP-1</th><th>Próximo acompanhamento</th><th>Data</th><th>Status</th></tr></thead><tbody>
- ${L.map(p=>{const l=last(p),x=nxt(p);return`<tr class="cl" onclick="hist('${p.id}')"><td><b>${esc(p.nome)}</b></td><td class="mu nw">${br(l.date)}</td><td>${l.id?tl(l):'—'}</td><td class="mu">${l.glp||'—'}</td><td>${x?`<span class="dl"><span class="dot ${x.b=='late'?'late':x.b=='up'||x.b=='far'?'far':''}"></span>${x.l}</span>`:'<span class="mu">—</span>'}</td><td class="nw ${x&&x.b=='late'?'wn':'mu'}">${x?sh(x.due):'—'}</td><td><span class="chip ${p.status=='Ativo'?'ok':''}">${p.status}</span></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Nenhum paciente encontrado.</td></tr>'}
+ <div class="panel"><table><thead><tr><th>Nome</th><th>Última consulta</th><th>Atendimento</th><th>GLP-1</th><th>Próximo passo</th><th>Data</th><th>Status</th></tr></thead><tbody>
+ ${L.map(p=>{const l=last(p),x=nxt(p);return`<tr class="cl" onclick="hist('${p.id}')"><td><b>${esc(p.nome)}</b></td><td class="mu nw">${br(l.date)}</td><td>${l.id?tl(l):'—'}</td><td class="mu">${l.glp||'—'}</td><td>${x?`<span class="dl"><span class="dot ${x.b=='late'?'late':x.b=='now'?'':'far'}"></span>${x.l}</span>`:'<span class="mu">—</span>'}</td><td class="nw ${x&&x.b=='late'?'wn':'mu'}">${x?sh(x.due):'—'}</td><td><span class="chip ${p.status=='Ativo'?'ok':''}">${p.status}</span></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Nenhum paciente encontrado.</td></tr>'}
  </tbody></table></div><div class="mu foot">Importar CSV de pacientes — colunas: nome, data consulta, tipo, glp1, entrega, próxima, status</div>`}
 function vTar(){const row=t=>`<div class="tr"><input type="checkbox" aria-label="Concluir tarefa" ${t.ok?'checked':''} onchange="tk('${t.id}')"><span class="${t.ok?'dn':''}">${esc(t.txt)}</span><span class="mu nw">${t.data?(!t.ok&&diff(t.data,T)<0?'<b class="wn">atrasada</b> ':'')+sh(t.data):''}</span><button type="button" class="btn q" aria-label="Excluir tarefa" onclick="rm('tar','${t.id}')">✕</button></div>`;
- const P_=X.tar.filter(t=>!t.ok).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),Dn=X.tar.filter(t=>t.ok);
- return`<div class="top"><div><div class="eyebrow">${P_.length} pendente${P_.length==1?'':'s'}</div><h1>Minhas tarefas</h1></div></div>
+ const P_=X.tar.filter(t=>!t.ok).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),Dn=X.tar.filter(t=>t.ok),rt=rets().sort((a,b)=>a.due.localeCompare(b.due)),n=P_.length+rt.length;
+ return`<div class="top"><div><div class="eyebrow">${n} pendente${n==1?'':'s'}</div><h1>Minhas tarefas</h1></div></div>
+ ${rt.length?`<div class="panel" style="margin-bottom:18px"><div class="ph"><h2>Agendar retornos</h2><span class="mu">${rt.length} paciente${rt.length==1?'':'s'}</span></div>${rt.map(ev).join('')}</div>`:''}
  <div class="addt"><input type="text" id="nt" placeholder="Nova tarefa…" aria-label="Nova tarefa" onkeydown="if(event.key=='Enter')addT()"><input type="date" id="nd" value="${T}" aria-label="Data da tarefa">${B('Adicionar','addT()','pri')}</div>
  <div class="panel">${P_.map(row).join('')||'<div class="empty">Nenhuma tarefa pendente.</div>'}</div>${Dn.length?`<h3 class="sec">Concluídas</h3><div class="panel soft">${Dn.map(row).join('')}</div>`:''}`}
 function vPos(){const L=[...X.pos].sort((a,b)=>(a.data||'9').localeCompare(b.data||'9'));

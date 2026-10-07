@@ -109,6 +109,7 @@ select{-webkit-appearance:none;appearance:none;padding-right:34px;background-ima
 .tg{width:36px;height:22px;border-radius:999px;background:var(--far);border:0;position:relative;cursor:pointer;padding:0;flex:none;vertical-align:middle}
 .tg::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
 .tg.on{background:var(--sage)}.tg.on::after{left:17px}.tg:focus-visible{outline:2px solid rgba(143,160,120,.6);outline-offset:2px}
+.srt{all:unset;cursor:pointer;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;display:inline-flex;gap:6px;align-items:center}.srt span{color:var(--sage-d,#6f7f5a)}.srt:hover{color:var(--ink,#2b2c27)}.srt:focus-visible{outline:2px solid rgba(143,160,120,.6);outline-offset:3px;border-radius:4px}
 .hn{display:block;white-space:normal;max-width:170px;line-height:1.3;margin-top:4px;font-size:12px;color:var(--mut)}
 @media(max-width:800px){.app{display:block;padding:12px}.side{position:static;width:auto;height:auto;flex-direction:row;align-items:center;overflow-x:auto;padding:6px;border-radius:999px;margin-bottom:6px}
 .sync{display:none}.br{padding:0 8px 0 10px;flex:none}.br img{width:96px}.nv{width:auto;white-space:nowrap;flex:none;min-height:40px}.nf{margin:0;padding:0;flex-direction:row}
@@ -329,7 +330,10 @@ function impCup(file){if(!file)return;file.text().then(t=>{const R=csvP(t);if(R.
   const o={id:uid(),marca:g(0),cpes:z(g(1)),ppes:z(g(2)),cpac:z(g(3)),ppac:z(g(4)),cri:dBR(g(5)),vald:g(6),obs:g(7),site:si>=0?g(si):'',pub:pi>=0&&/^(s|1|true|x)/i.test(g(pi))};
   o.st=CST.includes(g(8))?g(8):(o.cpac||(o.cpes&&!/^(aguardando|\?)$/i.test(o.cpes)))?'Ativo':'Aguardando';return o}).filter(x=>x.marca))})}
 function expCup(){csvD('Cupons - '+brF(T).replace(/\//g,'-')+'.csv',[['Marca','Cupom Pessoal','% Pessoal','Cupom Paciente','% Paciente','Data Criação','Validade','Observações','Status','Site da marca','Na página'],...sCup(X.cup).map(c=>[c.marca,c.cpes,c.ppes,c.cpac,c.ppac,brF(c.cri),c.vald,c.obs,c.st,c.site||'',c.pub?'Sim':'Não'])])}
-const sCup=L=>[...L].sort((a,b)=>CST.indexOf(a.st)-CST.indexOf(b.st)||String(a.marca).localeCompare(b.marca,'pt'));
+// ordem alfabética pela marca (ignora acento e maiúscula); CS=1 vai de A a Z, CS=-1 de Z a A
+let CS=1;
+const sCup=L=>[...L].sort((a,b)=>CS*key(a.marca||'').localeCompare(key(b.marca||''),'pt'));
+const cupOrd=()=>{CS=-CS;render()};
 function cpy(v){(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast('Cupom '+v+' copiado ✓')).catch(()=>toast('Não consegui copiar — selecione o cupom e copie à mão','err'))}
 // ---- página das pacientes (cupons.html): link, liberar marcas e sites
 const PUBURL=()=>{try{return new URL('cupons.html',location.href).href}catch(e){return ''}};
@@ -459,7 +463,7 @@ function vCup(){const q=key(cq),A=X.cup,L=sCup(A.filter(c=>CF[cf][1](c)&&(!q||ke
  return`<div class="top"><div><div class="eyebrow">${A.filter(c=>c.st=='Ativo').length} ativos · ${A.filter(c=>c.st=='Aguardando').length} aguardando</div><h1>Cupons</h1></div><div class="acts">${impBtn('impCup')}${B('Exportar CSV','expCup()')}${B('+ Novo cupom',"gOpen('cup')",'pri')}</div></div>
  ${box}
  <div class="tools">${srch('cq','Buscar marca ou cupom',cq,'cq')}${chips(CF,cf,'cf',k=>A.filter(CF[k][1]).length)}</div>
- <div class="panel cupt"><table><thead><tr><th>Marca</th><th>Cupom do paciente</th><th>%</th><th>Cupom pessoal</th><th>%</th><th>Criado em</th><th>Validade</th><th>Status</th><th>Na página</th></tr></thead><tbody>
+ <div class="panel cupt"><table><thead><tr><th aria-sort="${CS>0?'ascending':'descending'}"><button type="button" class="srt" onclick="cupOrd()" title="Inverter a ordem">Marca <span>${CS>0?'A→Z':'Z→A'}</span></button></th><th>Cupom do paciente</th><th>%</th><th>Cupom pessoal</th><th>%</th><th>Criado em</th><th>Validade</th><th>Status</th><th>Na página</th></tr></thead><tbody>
  ${L.map(c=>`<tr class="cl ${c.st=='Inativo'?'zero':''}" onclick="gOpen('cup','${c.id}')"><td><b>${esc(c.marca)}</b>${c.obs?`<div class="mu clamp">${esc(c.obs)}</div>`:''}</td><td class="nw"><span class="cc">${code(c.cpac)}${isC(c.cpac)?`<button type="button" class="ib" title="Copiar cupom" aria-label="Copiar cupom ${esc(c.cpac)}" onclick="event.stopPropagation();cpy('${esc(c.cpac)}')"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 5.5h7v7h-7zM10.5 5.5v-2h-7v7h2"/></svg></button>`:''}</span></td><td class="nw">${pc(c.ppac)}</td><td class="nw">${code(c.cpes)}</td><td class="nw">${pc(c.ppes)}</td><td class="mu nw">${c.cri?br(c.cri):'—'}</td><td class="mu">${esc(c.vald)||'—'}</td><td><span class="chip ${c.st=='Ativo'?'ok':c.st=='Aguardando'?'warn':''}">${c.st}</span></td>${pubCell(c)}</tr>`).join('')||'<tr><td colspan="9" class="empty">Nenhum cupom encontrado.</td></tr>'}
  </tbody></table></div><div class="mu foot">Clique no ícone ao lado do cupom do paciente para copiar e colar na mensagem. A página das pacientes mostra só as marcas com "Na página" ligado, com status Ativo e com cupom do paciente.</div>`}
 function render(){$('#nav').innerHTML=`<div class="br"><img src="${LOGO}" alt="Amanda Muzzio, nutricionista"></div>`+NV.map(([k,l])=>`<button type="button" class="nv ${view==k?'on':''}" onclick="go('${k}')" ${view==k?'aria-current="page"':''}>${svg(k)}${l}</button>`).join('')+`<div class="nf"><button type="button" class="nv" onclick="cfg()">${svg('cfg')}Ajustes</button><div class="sync ${API&&OK?'ok':''}"><i></i>${API?(OK?'Google Sheets':'conectando…'):'modo local'}</div></div>`;

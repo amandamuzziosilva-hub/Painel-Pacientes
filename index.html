@@ -122,7 +122,9 @@ main{padding:22px 4px 60px}h1{font-size:32px}.cards{grid-template-columns:repeat
 const $=s=>document.querySelector(s);
 const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 function f(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-const T=f(new Date());
+// "hoje" é recalculado a cada tela; assim prazos e lembretes acompanham o dia mesmo com a aba aberta por dias
+let T=f(new Date());
+const dd=n=>n+' dia'+(n==1?'':'s');
 const D=s=>new Date(s+'T12:00:00'),add=(s,n)=>{const d=D(s);d.setDate(d.getDate()+n);return f(d)},diff=(a,b)=>Math.round((D(a)-D(b))/864e5);
 const br=s=>s?s.split('-').reverse().join('/'):'—',sh=s=>s?br(s).slice(0,5):'—',uid=()=>Math.random().toString(36).slice(2,10),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const B=(t,js,c)=>`<button type="button" class="btn ${c||''}" onclick="${js}">${t}</button>`;
@@ -359,10 +361,10 @@ function cyc(id){const p=X.pos.find(i=>i.id==id);p.st=PST[(PST.indexOf(p.st)+1)%
 function qty(id,d){const s=X.est.find(i=>i.id==id);s.qtd=Math.max(0,(+s.qtd||0)+d);if(!s.qtd){s.val='';toast(s.prod+' esgotou e foi para "Esgotadas"')}sx('est',s)}
 function repor(id){gOpen('est',id);$('#g_qtd').value=1;const v=$('#g_val');v.value='';v.focus();toast('Informe a validade do novo lote e a quantidade')}
 const SG={
- pos:{t:'postagem',d:{st:'ideia',fmt:'carrossel',data:T},f:[{n:'tema',l:'Tema ou ideia',t:'text',full:1},{n:'data',l:'Data',t:'date'},{n:'fmt',l:'Formato',t:'select',o:['carrossel','reels','story','dump','TBT','outro']},{n:'st',l:'Status',t:'select',o:PST}]},
- est:{t:'amostra',d:{qtd:1},f:[{n:'prod',l:'Produto',t:'text',full:1},{n:'ativo',l:'Ativo',t:'text',full:1},{n:'marca',l:'Marca',t:'opt'},{n:'cat',l:'Categoria',t:'opt'},{n:'apr',l:'Apresentação',t:'text',full:1,ph:'ex.: Cápsula, Pó sabor limão'},{n:'car',l:'Características',t:'tags',full:1},{n:'val',l:'Validade',t:'date'},{n:'qtd',l:'Estoque (unidades)',t:'number'}]},
- cup:{t:'cupom',d:{st:'Ativo',cri:T,pub:false},f:[{n:'marca',l:'Marca',t:'text',full:1},{n:'site',l:'Site da marca',t:'text',full:1,ph:'https://… (abre quando a paciente toca na marca)'},{n:'cpac',l:'Cupom do paciente',t:'text'},{n:'ppac',l:'% do paciente',t:'text',ph:'ex.: 10%'},{n:'cpes',l:'Cupom pessoal',t:'text',ph:'ex.: aplicado no site'},{n:'ppes',l:'% pessoal',t:'text',ph:'ex.: 20%'},{n:'cri',l:'Data de criação',t:'date'},{n:'vald',l:'Validade',t:'text',ph:'ex.: 12 meses, Desconhecida'},{n:'st',l:'Status',t:'select',o:CST},{n:'pub',l:'Página das pacientes',t:'check',full:1,l2:'Mostrar este cupom na página das pacientes (só aparece se o status for Ativo)'},{n:'obs',l:'Observações',t:'text',full:1}]}};
-function gOpen(k,id){const S=SG[k],it=id?X[k].find(i=>i.id==id):S.d;
+ pos:{t:'postagem',d:()=>({st:'ideia',fmt:'carrossel',data:T}),f:[{n:'tema',l:'Tema ou ideia',t:'text',full:1},{n:'data',l:'Data',t:'date'},{n:'fmt',l:'Formato',t:'select',o:['carrossel','reels','story','dump','TBT','outro']},{n:'st',l:'Status',t:'select',o:PST}]},
+ est:{t:'amostra',d:()=>({qtd:1}),f:[{n:'prod',l:'Produto',t:'text',full:1},{n:'ativo',l:'Ativo',t:'text',full:1},{n:'marca',l:'Marca',t:'opt'},{n:'cat',l:'Categoria',t:'opt'},{n:'apr',l:'Apresentação',t:'text',full:1,ph:'ex.: Cápsula, Pó sabor limão'},{n:'car',l:'Características',t:'tags',full:1},{n:'val',l:'Validade',t:'date'},{n:'qtd',l:'Estoque (unidades)',t:'number'}]},
+ cup:{t:'cupom',d:()=>({st:'Ativo',cri:T,pub:false}),f:[{n:'marca',l:'Marca',t:'text',full:1},{n:'site',l:'Site da marca',t:'text',full:1,ph:'https://… (abre quando a paciente toca na marca)'},{n:'cpac',l:'Cupom do paciente',t:'text'},{n:'ppac',l:'% do paciente',t:'text',ph:'ex.: 10%'},{n:'cpes',l:'Cupom pessoal',t:'text',ph:'ex.: aplicado no site'},{n:'ppes',l:'% pessoal',t:'text',ph:'ex.: 20%'},{n:'cri',l:'Data de criação',t:'date'},{n:'vald',l:'Validade',t:'text',ph:'ex.: 12 meses, Desconhecida'},{n:'st',l:'Status',t:'select',o:CST},{n:'pub',l:'Página das pacientes',t:'check',full:1,l2:'Mostrar este cupom na página das pacientes (só aparece se o status for Ativo)'},{n:'obs',l:'Observações',t:'text',full:1}]}};
+function gOpen(k,id){const S=SG[k],it=id?X[k].find(i=>i.id==id):S.d();
  $('#m').innerHTML=`<div class="ov"><div class="md"><h2>${id?'Editar':(k=='cup'?'Novo':'Nova')} ${S.t}</h2><div class="g2">${S.f.map(F=>{const v=it[F.n]==null?'':it[F.n];let inp;
   if(F.t=='select')inp=`<select id="g_${F.n}">${F.o.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}</select>`;
   else if(F.t=='opt'){const L=ON(F.n);if(v&&!L.includes(v))L.push(v);
@@ -396,7 +398,7 @@ function ev(e){const pi=e.p.id,ci=e.c.id;
   enc:B('Registrar consulta',`abrirForm('${pi}')`,'pri')+B('Alterar data',`agd('${pi}','${ci}')`),
   cic:B('Ver paciente',`hist('${pi}')`,'pri'),
   dec:B('Renovar',`dec('${pi}','${ci}','Renovar')`,'pri')+B('Encerrar',`dec('${pi}','${ci}','Encerrar')`)}[e.kind];
- const t=e.days<0?`há ${-e.days} dias`:e.days==0?'hoje':`em ${e.days} dias`,
+ const t=e.days<0?`há ${dd(-e.days)}`:e.days==0?'hoje':`em ${dd(e.days)}`,
   rot={ret:e.b=='far'?'Pendente':'Agendar',msg:'Lembrete',chk:'Lembrete',enc:'Consulta',cic:'Ciclo',dec:'Ciclo 3/3'}[e.kind],
   ex={ret:`prazo ${sh(e.due)} · ${e.days<0?`atrasado há ${-e.days} dia${e.days==-1?'':'s'}`:e.days==0?'vence hoje':`faltam ${e.days} dia${e.days==1?'':'s'}`} · consulta em ${sh(e.c.date)}`,
    msg:'hoje · plano entregue em '+sh(e.c.entrega),chk:'hoje · consulta em '+sh(e.c.date),enc:br(e.due)+' ('+t+')',cic:'prazo até '+br(e.due),dec:'3º encontro em '+sh(e.c.date)}[e.kind];
@@ -421,7 +423,7 @@ function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='no
  <section class="cards" aria-label="Resumo">
  <div class="card glass c1"><small>Retornos para agendar</small><span class="n">${rt.length}</span><span class="ft ${rl?'wn':''}">${rt.length?(rl?rl+' atrasado'+(rl>1?'s':'')+' · ':'')+esc(rt.map(e=>e.p.nome.split(' ')[0]).slice(0,3).join(', ')):'ninguém urgente'}${PF.length?` · +${PF.length} pendente${PF.length>1?'s':''} no prazo`:''}</span></div>
  <div class="card glass"><small>Pendências hoje</small><span class="n">${N}</span><span class="ft ${late?'wn':''}">${late?late+' atrasada'+(late>1?'s':''):'tudo em dia'}</span></div>
- <div class="card glass"><small>Amostras a vencer · 30d</small><span class="n">${ex.length}</span><span class="ft">${(v=>v?v+' vencida'+(v>1?'s':'')+' · '+(ex.length-v)+' a vencer':ex.length?'a primeira em '+diff(ex[0].val,T)+' dias':'nada vencendo')(ex.filter(x=>diff(x.val,T)<0).length)}</span></div>
+ <div class="card glass"><small>Amostras a vencer · 30d</small><span class="n">${ex.length}</span><span class="ft">${(v=>v?v+' vencida'+(v>1?'s':'')+' · '+(ex.length-v)+' a vencer':ex.length?(n=>n==0?'a primeira vence hoje':'a primeira em '+dd(n))(diff(ex[0].val,T)):'nada vencendo')(ex.filter(x=>diff(x.val,T)<0).length)}</span></div>
  <div class="card glass"><small>Posts na semana</small><span class="n">${wk.length}</span><span class="ft">${wk.length?pr+' pronto'+(pr==1?'':'s')+' · '+(wk.length-pr)+' em andamento':'nada agendado'}</span></div></section>
  <div class="duo"><section class="panel" aria-label="Precisa da minha atenção"><div class="ph"><h2>Precisa da minha atenção</h2><span class="mu">${N} ite${N==1?'m':'ns'}</span></div>
  ${A.map(ev).join('')}${tk_.map(t=>`<div class="row"><div class="who"><div class="nm"><span class="dot task"></span>${esc(t.txt)}</div><div class="sub">Tarefa · ${t.data?when(t.data):'sem data'}</div></div><span class="chip">Tarefa</span><div class="acts">${B('Feita',`tk('${t.id}')`)}</div></div>`).join('')}${N?'':'<div class="empty">Nada pendente agora.</div>'}
@@ -469,7 +471,7 @@ function vCup(){const q=key(cq),A=X.cup,L=sCup(A.filter(c=>CF[cf][1](c)&&(!q||ke
  <div class="panel cupt"><table><thead><tr><th aria-sort="${CS>0?'ascending':'descending'}"><button type="button" class="srt" onclick="cupOrd()" title="Inverter a ordem">Marca <span>${CS>0?'A→Z':'Z→A'}</span></button></th><th>Cupom do paciente</th><th>%</th><th>Cupom pessoal</th><th>%</th><th>Criado em</th><th>Validade</th><th>Status</th><th>Na página</th></tr></thead><tbody>
  ${L.map(c=>`<tr class="cl ${c.st=='Inativo'?'zero':''}" onclick="gOpen('cup','${c.id}')"><td><b>${esc(c.marca)}</b>${c.obs?`<div class="mu clamp">${esc(c.obs)}</div>`:''}</td><td class="nw"><span class="cc">${code(c.cpac)}${isC(c.cpac)?`<button type="button" class="ib" title="Copiar cupom" aria-label="Copiar cupom ${esc(c.cpac)}" onclick="event.stopPropagation();cpy('${esc(c.cpac)}')"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 5.5h7v7h-7zM10.5 5.5v-2h-7v7h2"/></svg></button>`:''}</span></td><td class="nw">${pc(c.ppac)}</td><td class="nw">${code(c.cpes)}</td><td class="nw">${pc(c.ppes)}</td><td class="mu nw">${c.cri?br(c.cri):'—'}</td><td class="mu">${esc(c.vald)||'—'}</td><td><span class="chip ${c.st=='Ativo'?'ok':c.st=='Aguardando'?'warn':''}">${c.st}</span></td>${pubCell(c)}</tr>`).join('')||'<tr><td colspan="9" class="empty">Nenhum cupom encontrado.</td></tr>'}
  </tbody></table></div><div class="mu foot">Clique no ícone ao lado do cupom do paciente para copiar e colar na mensagem. A página das pacientes mostra só as marcas com "Na página" ligado, com status Ativo e com cupom do paciente.</div>`}
-function render(){$('#nav').innerHTML=`<div class="br"><img src="${LOGO}" alt="Amanda Muzzio, nutricionista"></div>`+NV.map(([k,l])=>`<button type="button" class="nv ${view==k?'on':''}" onclick="go('${k}')" ${view==k?'aria-current="page"':''}>${svg(k)}${l}</button>`).join('')+`<div class="nf"><button type="button" class="nv" onclick="cfg()">${svg('cfg')}Ajustes</button><div class="sync ${API&&OK?'ok':''}"><i></i>${API?(OK?'Google Sheets':'conectando…'):'modo local'}</div></div>`;
+function render(){T=f(new Date());$('#nav').innerHTML=`<div class="br"><img src="${LOGO}" alt="Amanda Muzzio, nutricionista"></div>`+NV.map(([k,l])=>`<button type="button" class="nv ${view==k?'on':''}" onclick="go('${k}')" ${view==k?'aria-current="page"':''}>${svg(k)}${l}</button>`).join('')+`<div class="nf"><button type="button" class="nv" onclick="cfg()">${svg('cfg')}Ajustes</button><div class="sync ${API&&OK?'ok':''}"><i></i>${API?(OK?'Google Sheets':'conectando…'):'modo local'}</div></div>`;
  $('#v').innerHTML=({hoje:vHoje,tar:vTar,pac:vPac,pos:vPos,est:vEst,cup:vCup})[view]()}
 // ---- importação CSV de pacientes
 function imp(file){if(!file)return;file.text().then(t=>{const ls=csvP(t);
@@ -479,4 +481,12 @@ function imp(file){if(!file)return;file.text().then(t=>{const ls=csvP(t);
   p.consults.push({id:uid(),date:dBR(c[1]),tipo:tp(c[2]),glp:/^s/i.test(c[3])?'Sim':'Não',entrega:dBR(c[4])||dBR(c[1]),proxima:dBR(c[5]),msg:false,chk:false,obs:''});ct++});
  db.forEach(p=>save(p));toast(ct+' consultas importadas ✓');render()})}
 load();
+// atualização automática: quando o dia vira (ou muda a saudação) a tela é refeita;
+// ao voltar para a aba depois de 5 minutos, os dados são buscados de novo na planilha
+const marca_=()=>{const h=new Date().getHours();return f(new Date())+(h<5||h>=18?'n':h<12?'m':'t')};
+let MK=marca_(),SAIU=0;
+const livre_=()=>!$('#m').innerHTML&&!(document.activeElement&&$('#v').contains(document.activeElement)&&/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
+setInterval(()=>{const m=marca_();if(m!=MK&&livre_()){MK=m;render()}},60000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){SAIU=Date.now();return}
+ if(SAIU&&Date.now()-SAIU>=3e5&&!$('#m').innerHTML){MK=marca_();load()}else if(marca_()!=MK&&livre_()){MK=marca_();render()}});
 </script></body></html>

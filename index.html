@@ -51,8 +51,11 @@ h2{margin:0;font-size:19px;font-weight:500;letter-spacing:-.01em}
 .lk{border:0;background:none;padding:0;cursor:pointer;font-weight:500;text-align:left}.lk:hover{color:var(--sageT)}
 .dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--sage)}.dot.late{background:var(--terra)}.dot.far{background:var(--far)}.dot.task{border-radius:2px;background:#C9BFAE}
 .dl{display:inline-flex;align-items:center;gap:8px}
-.row.hot{margin:8px 12px;padding:16px 18px;border:1px solid rgba(255,255,255,.95);border-radius:20px;background:radial-gradient(90% 160% at 12% 50%,rgba(180,102,74,.24),rgba(180,102,74,.08) 60%,rgba(255,255,255,.55));box-shadow:0 10px 28px rgba(180,102,74,.16)}
-.row.hot+.row{border-top:0}.row.hot .nm{color:var(--terraT)}.chip.hot{background:var(--terra);color:#fff}
+.row.hot{position:relative;isolation:isolate;overflow:hidden;margin:8px 12px;padding:18px 20px;border:1px solid rgba(255,255,255,.55);border-radius:22px;color:#fff;background:radial-gradient(55% 120% at 100% 0%,rgba(246,241,240,.92),rgba(246,241,240,0) 72%),radial-gradient(75% 150% at 58% 40%,#EC9E62,rgba(219,132,80,.85) 38%,rgba(219,132,80,0) 78%),radial-gradient(85% 170% at 0% 100%,#3B2223,#7A3122 48%,rgba(122,49,34,0) 88%),#B9673F;box-shadow:0 16px 40px rgba(122,49,34,.28)}
+/* granulado leve, como papel fotográfico */
+.row.hot::before{content:'';position:absolute;inset:0;z-index:-1;opacity:.22;mix-blend-mode:overlay;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.row.hot+.row{border-top:0}.row.hot .nm,.row.hot .lk,.row.hot .wn{color:#fff}.row.hot .sub{color:rgba(255,255,255,.9)}.row.hot .who{text-shadow:0 1px 10px rgba(59,34,35,.35)}.row.hot .dot.late{background:#fff}
+.chip.hot{background:rgba(255,255,255,.92);color:var(--terraT)}.row.hot .btn:not(.pri){background:rgba(255,255,255,.88);color:var(--ink)}
 .chip{display:inline-block;padding:3px 11px;border-radius:999px;background:rgba(43,44,39,.07);color:#3F4039;font-size:12px;font-weight:500;white-space:nowrap}
 .chip.late{background:rgba(180,102,74,.13);color:var(--terraT)}.chip.ok{background:rgba(143,160,120,.2);color:var(--sageT)}.chip.warn{background:rgba(201,170,110,.2);color:#6E5520}
 button.chip{border:0;cursor:pointer}button.chip.on{background:var(--ink);color:#F6F5F0}

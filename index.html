@@ -51,6 +51,16 @@ h2{margin:0;font-size:19px;font-weight:500;letter-spacing:-.01em}
 .lk{border:0;background:none;padding:0;cursor:pointer;font-weight:500;text-align:left}.lk:hover{color:var(--sageT)}
 .dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--sage)}.dot.late{background:var(--terra)}.dot.far{background:var(--far)}.dot.task{border-radius:2px;background:#C9BFAE}
 .dl{display:inline-flex;align-items:center;gap:8px}
+.row.hot{position:relative;isolation:isolate;overflow:hidden;margin:8px 12px;padding:18px 20px;border:1px solid rgba(255,255,255,.55);border-radius:22px;color:#fff;background:radial-gradient(55% 120% at 100% 0%,rgba(246,241,240,.92),rgba(246,241,240,0) 72%),radial-gradient(75% 150% at 58% 40%,#EC9E62,rgba(219,132,80,.85) 38%,rgba(219,132,80,0) 78%),radial-gradient(85% 170% at 0% 100%,#3B2223,#7A3122 48%,rgba(122,49,34,0) 88%),#B9673F;box-shadow:0 16px 40px rgba(122,49,34,.28)}
+/* granulado leve, como papel fotográfico */
+.row.hot::before,.row.soon::before,.card.c1::before{content:'';position:absolute;inset:0;z-index:-1;opacity:.22;mix-blend-mode:overlay;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* verde etéreo: card "Retornos para agendar" e pacientes com "Agendar" (mais suave) */
+.card.c1{position:relative;isolation:isolate;overflow:hidden;color:#fff;border-color:rgba(255,255,255,.55);background:radial-gradient(65% 95% at 100% 0%,#1F3D27,rgba(31,61,39,0) 72%),radial-gradient(75% 85% at 92% 112%,rgba(208,217,184,.95),rgba(208,217,184,0) 70%),linear-gradient(160deg,#7E9C74,#5E8357);box-shadow:0 16px 40px rgba(31,61,39,.22)}
+.card.c1 small,.card.c1 .ft{color:rgba(255,255,255,.88)}.card.c1 .ft.wn{color:#fff}
+.row.soon{position:relative;isolation:isolate;overflow:hidden;margin:8px 12px;padding:18px 20px;border:1px solid rgba(255,255,255,.6);border-radius:22px;color:#fff;background:radial-gradient(55% 130% at 100% 0%,rgba(31,61,39,.62),rgba(31,61,39,0) 70%),radial-gradient(60% 140% at 86% 112%,rgba(220,227,198,.9),rgba(220,227,198,0) 70%),linear-gradient(150deg,#86A27C,#68895F);box-shadow:0 12px 30px rgba(31,61,39,.14)}
+.row.soon+.row{border-top:0}.row.soon .nm,.row.soon .lk{color:#fff}.row.soon .sub{color:rgba(255,255,255,.92)}.row.soon .who{text-shadow:0 1px 10px rgba(31,61,39,.3)}.row.soon .dot{background:#fff}.chip.soft{background:rgba(255,255,255,.92);color:var(--sageT)}
+.row.hot+.row{border-top:0}.row.hot .nm,.row.hot .lk,.row.hot .wn{color:#fff}.row.hot .sub{color:rgba(255,255,255,.9)}.row.hot .who{text-shadow:0 1px 10px rgba(59,34,35,.35)}.row.hot .dot.late{background:#fff}
+.chip.hot{background:rgba(255,255,255,.92);color:var(--terraT)}.row.hot .btn:not(.pri){background:rgba(255,255,255,.88);color:var(--ink)}
 .chip{display:inline-block;padding:3px 11px;border-radius:999px;background:rgba(43,44,39,.07);color:#3F4039;font-size:12px;font-weight:500;white-space:nowrap}
 .chip.late{background:rgba(180,102,74,.13);color:var(--terraT)}.chip.ok{background:rgba(143,160,120,.2);color:var(--sageT)}.chip.warn{background:rgba(201,170,110,.2);color:#6E5520}
 button.chip{border:0;cursor:pointer}button.chip.on{background:var(--ink);color:#F6F5F0}
@@ -429,11 +439,11 @@ function ev(e){const pi=e.p.id,ci=e.c.id;
   rot={ret:e.b=='far'?'Pendente':'Agendar',msg:'Lembrete',chk:'Lembrete',enc:'Consulta',cic:'Ciclo',dec:'Ciclo 3/3'}[e.kind],
   ex={ret:`prazo ${sh(e.due)} · ${e.days<0?`atrasado há ${-e.days} dia${e.days==-1?'':'s'}`:e.days==0?'vence hoje':`faltam ${e.days} dia${e.days==1?'':'s'}`} · consulta em ${sh(e.c.date)}`,
    msg:'hoje · plano entregue em '+sh(e.c.entrega),chk:'hoje · consulta em '+sh(e.c.date),enc:br(e.due)+' ('+t+')',cic:'prazo até '+br(e.due),dec:'3º encontro em '+sh(e.c.date)}[e.kind];
- return`<div class="row"><div class="who"><div class="nm"><span class="dot ${e.b=='late'?'late':e.b=='rem'?'far':''}"></span><button type="button" class="lk" onclick="hist('${pi}')">${esc(e.p.nome)}</button></div><div class="sub">${e.l} · ${ex}</div></div><span class="chip ${e.b=='late'?'late':e.kind=='ret'?'warn':''}">${e.b=='late'?'Atrasado':rot}</span>${a?`<div class="acts">${a}</div>`:''}</div>`}
+ return`<div class="row${e.b=='late'?' hot':e.b=='now'&&e.kind=='ret'?' soon':''}"><div class="who"><div class="nm"><span class="dot ${e.b=='late'?'late':e.b=='rem'?'far':''}"></span><button type="button" class="lk" onclick="hist('${pi}')">${esc(e.p.nome)}</button></div><div class="sub">${e.l} · ${ex}</div></div><span class="chip ${e.b=='late'?'hot':e.b=='now'&&e.kind=='ret'?'soft':e.kind=='ret'?'warn':''}">${e.b=='late'?'Atrasado':rot}</span>${a?`<div class="acts">${a}</div>`:''}</div>`}
 const EXT=['Nenhuma','Uma','Duas','Três','Quatro','Cinco','Seis','Sete','Oito','Nove','Dez'];
 const rets=()=>db.flatMap(evs).filter(e=>e.kind=='ret'&&(e.b=='late'||e.b=='now')),retsF=()=>db.flatMap(evs).filter(e=>e.kind=='ret'&&e.b=='far').sort((a,b)=>a.due.localeCompare(b.due));
 const sub2=t=>`<div class="ph" style="padding-top:18px;border-top:1px solid var(--ln)"><span class="meta">${t}</span></div>`;
-function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='now'),R=all.filter(e=>e.b=='rem'),
+function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='now').sort((a,b)=>a.r-b.r||a.due.localeCompare(b.due)),R=all.filter(e=>e.b=='rem'),
  tk_=X.tar.filter(t=>!t.ok&&(!t.data||diff(t.data,T)<=0)).sort((a,b)=>(a.data||'').localeCompare(b.data||'')),
  N=A.length+tk_.length,late=A.filter(e=>e.b=='late').length+tk_.filter(t=>t.data&&diff(t.data,T)<0).length,
  rt=A.filter(e=>e.kind=='ret'),rl=rt.filter(e=>e.b=='late').length,PF=retsF(),
@@ -453,7 +463,10 @@ function vHoje(){const all=db.flatMap(evs),A=all.filter(e=>e.b=='late'||e.b=='no
  <div class="card glass"><small>Amostras a vencer · 30d</small><span class="n">${ex.length}</span><span class="ft">${(v=>v?v+' vencida'+(v>1?'s':'')+' · '+(ex.length-v)+' a vencer':ex.length?(n=>n==0?'a primeira vence hoje':'a primeira em '+dd(n))(diff(ex[0].val,T)):'nada vencendo')(ex.filter(x=>diff(x.val,T)<0).length)}</span></div>
  <div class="card glass"><small>Posts na semana</small><span class="n">${wk.length}</span><span class="ft">${wk.length?pr+' pronto'+(pr==1?'':'s')+' · '+(wk.length-pr)+' em andamento':'nada agendado'}</span></div></section>
  <div class="duo"><section class="panel" aria-label="Precisa da minha atenção"><div class="ph"><h2>Precisa da minha atenção</h2><span class="mu">${N} ite${N==1?'m':'ns'}</span></div>
- ${A.map(ev).join('')}${tk_.map(t=>`<div class="row"><div class="who"><div class="nm"><span class="dot task"></span>${esc(t.txt)}</div><div class="sub">Tarefa · ${t.data?when(t.data):'sem data'}</div></div><span class="chip">Tarefa</span><div class="acts">${B('Feita',`tk('${t.id}')`)}</div></div>`).join('')}${N?'':'<div class="empty">Nada pendente agora.</div>'}
+ ${(()=>{const tr=t=>{const lt=t.data&&diff(t.data,T)<0;return`<div class="row${lt?' hot':''}"><div class="who"><div class="nm"><span class="dot ${lt?'late':'task'}"></span>${esc(t.txt)}</div><div class="sub">Tarefa · ${t.data?when(t.data):'sem data'}</div></div><span class="chip ${lt?'hot':''}">${lt?'Atrasada':'Tarefa'}</span><div class="acts">${B('Feita',`tk('${t.id}')`)}</div></div>`};
+  // atrasados primeiro (pacientes e tarefas juntos, do mais antigo para o mais recente), depois o resto
+  const L=[...A.filter(e=>e.b=='late').map(e=>({d:e.due,h:ev(e)})),...tk_.filter(t=>t.data&&diff(t.data,T)<0).map(t=>({d:t.data,h:tr(t)}))].sort((a,b)=>a.d.localeCompare(b.d));
+  return L.map(x=>x.h).join('')+A.filter(e=>e.b!='late').map(ev).join('')+tk_.filter(t=>!(t.data&&diff(t.data,T)<0)).map(tr).join('')})()}${N?'':'<div class="empty">Nada pendente agora.</div>'}
  ${PF.length?sub2('Agendamento pendente · ainda no prazo')+PF.map(ev).join(''):''}${R.length?sub2('Lembretes de hoje')+R.map(ev).join(''):''}</section>
  <section class="panel soft" aria-label="Próximos 7 dias"><div class="ph"><h2>Próximos 7 dias</h2></div>
  ${up.length?up.map(x=>{const d=D(x.d);return`<div class="tl"><div class="d"><b>${String(d.getDate()).padStart(2,'0')}</b><span>${MES[d.getMonth()]}</span></div><div class="t"><span>${esc(x.n)}</span><span class="meta">${esc(x.k)} · ${when(x.d)}</span></div></div>`}).join(''):'<div class="empty">Nada previsto.</div>'}</section></div>`}

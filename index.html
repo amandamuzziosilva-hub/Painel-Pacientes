@@ -24,7 +24,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .nv.on{background:rgba(255,255,255,.92);box-shadow:0 1px 2px rgba(60,60,40,.05),0 6px 18px rgba(80,85,60,.06);font-weight:500}.nv.on svg{color:var(--ink)}
 .nf{margin-top:auto;padding-top:24px;display:flex;flex-direction:column;gap:2px}.nf .nv{font-size:14px;color:var(--mut)}
 .sync{display:flex;align-items:center;gap:8px;padding:10px 14px 0;font:11px 'DM Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
-.sync i{width:7px;height:7px;border-radius:50%;background:var(--far)}.sync.ok i{background:var(--sage)}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--far)}.sync.ok i{background:var(--sage)}.sync.pend i{background:var(--terra)}
 main{flex:1;min-width:0;padding:40px 20px 70px;max-width:1280px}
 .eyebrow{font:12px 'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
 h1{margin:0;font-size:46px;line-height:1.12;font-weight:300;letter-spacing:-.025em}h1 .s{color:var(--soft)}
@@ -78,7 +78,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid rgba(143,160,120,.45);
 .tr{display:flex;align-items:center;gap:14px;padding:13px 24px;border-top:1px solid var(--ln)}.tr:first-child{border-top:0}.tr input{width:18px;height:18px;accent-color:var(--sageT)}.tr>span:nth-child(2){flex:1}
 .ov{position:fixed;inset:0;background:rgba(43,44,39,.22);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px;z-index:5}
 .md{background:rgba(250,250,247,.94);border:1px solid #fff;border-radius:28px;box-shadow:0 30px 80px rgba(60,60,40,.18);max-width:640px;width:100%;padding:28px}.md h2{margin-bottom:6px}.md h1{font-size:30px}
-.md label{display:block;font-size:12.5px;font-weight:500;color:var(--mut);margin:14px 0 5px}.md label.c{display:flex;gap:8px;align-items:center}.md label.c input{width:auto}
+.md label{display:block;font-size:12.5px;font-weight:500;color:var(--mut);margin:14px 0 5px}.md label.c{display:flex;gap:8px;align-items:center}.md label.c input{width:auto;accent-color:var(--sageT)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.g2 .full{grid-column:1/-1}
 .cs{background:rgba(255,255,255,.75);border:1px solid #fff;border-radius:18px;padding:16px;margin:12px 0}
 .ln{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--ln);font-size:13.5px}
@@ -135,17 +135,34 @@ const PS=['Ativo','Pausado','Alta','Não vai retornar'],PST=['ideia','produzindo
 // regras de acompanhamento
 const INT=60,LIM_MESES=7,ENC=3;
 const FL={todos:'Todos',acao:'Precisa de ação',agendar:'Agendar retorno',semag:'Sem retorno agendado',agend:'Retorno agendado',ciclo:'Em ciclo',avulsa:'Avulsa',glp:'GLP-1',pausado:'Pausados',ativos:'Ativos'};
-function toast(m,e){const t=$('#t');t.textContent=m;t.className='s'+(e?' err':'');clearTimeout(t.h);t.h=setTimeout(()=>t.className='',3400)}
+function toast(m,e,ms){const t=$('#t');t.textContent=m;t.className='s'+(e?' err':'');clearTimeout(t.h);t.h=setTimeout(()=>t.className='',ms||3400)}
 const rr=id=>{render();const x=$('#'+id);if(x){x.focus();const n=x.value.length;try{x.setSelectionRange(n,n)}catch(e){}}};
 // ---- armazenamento (Google Sheets via Apps Script)
 let API=LS.g('api')||'',KEY=LS.g('key')||'',V2=false,OK=false;
 const COLS=['tar','pos','est','cup','opt'];
 const cache=()=>{LS.s('db',JSON.stringify(db));LS.s('x',JSON.stringify(X))};
 const url=()=>API+(API.includes('?')?'&':'?')+'v=2&k='+encodeURIComponent(KEY);
-async function post(b){cache();if(!API){toast('Salvo só neste aparelho — configure a sincronização','err');return}
- if(b.col!='pac'&&!V2){toast('Salvo só neste aparelho — atualize o Apps Script para sincronizar','err');return}
- try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...b,k:KEY})});const j=await r.json();if(j.erro)throw 0;toast(b.action=='del'?'Excluído ✓':b.action=='bulk'?'Importado e sincronizado ✓':'Salvo e sincronizado ✓')}
- catch(e){toast(b.action=='bulk'?'Salvo só neste aparelho — atualize o Apps Script para sincronizar importações':'Salvo só neste aparelho — falha ao sincronizar','err')}}
+// alterações que ainda não chegaram à planilha ficam numa fila guardada no aparelho e são enviadas quando a conexão volta
+let PQ=[];try{PQ=JSON.parse(LS.g('pq')||'[]')}catch(e){}
+let ENV=0,AVS=0;
+const syncEl=()=>`<div class="sync ${API&&OK&&!PQ.length?'ok':''}${API&&PQ.length?' pend':''}"><i></i>${!API?'modo local':PQ.length?PQ.length+' a enviar':OK?'Google Sheets':'conectando…'}</div>`;
+const pqS=()=>{LS.s('pq',JSON.stringify(PQ));const s=document.querySelector('.sync');if(s)s.outerHTML=syncEl()};
+// guarda só a versão mais recente de cada item; uma importação inteira substitui as alterações anteriores da mesma aba
+function pqAdd(b){const qk=b.action=='bulk'?'':b.col+':'+(b.action=='del'?b.id:b.item.id);PQ=PQ.filter(o=>b.action=='bulk'?o.col!=b.col:o.qk!==qk);PQ.push({...b,qk});pqS()}
+async function flush(){if(ENV||!OK||!V2)return 0;ENV=1;let n=0;
+ try{while(PQ.length){const o=PQ[0],{qk,...b}=o;const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...b,k:KEY})});const j=await r.json();if(j.erro)throw 0;PQ=PQ.filter(x=>x!==o);pqS();n++}AVS=0;return n}
+ catch(e){return -1}finally{ENV=0}}
+const OFF='Sem conexão: salvo neste aparelho. Será enviado para a planilha quando a conexão voltar';
+const alt=n=>n+(n>1?' alterações':' alteração');
+async function post(b,q){cache();if(!API){toast('Salvo só neste aparelho — configure a sincronização','err');return}
+ pqAdd(b);if(!OK){toast(OFF,'err');return}
+ if(ENV)return;const n=await flush();
+ if(n>0){if(!q)toast((b.action=='del'?'Excluído ✓':b.action=='bulk'?'Importado e sincronizado ✓':'Salvo e sincronizado ✓')+(n>1?' · '+alt(n-1)+' pendente'+(n>2?'s':'')+' também':''))}
+ else if(n<0)toast(OFF,'err')}
+// coloca por cima dos dados da planilha as alterações que ainda estão na fila, para não se perderem
+function aplicaFila(r){PQ.forEach(o=>{let L=r[o.col];if(!Array.isArray(L))return;
+ if(o.action=='bulk')L=o.items||[];else if(o.action=='del')L=L.filter(i=>i.id!=o.id);else{const i=L.findIndex(x=>x.id==o.item.id);if(i>=0)L[i]=o.item;else L.push(o.item)}
+ r[o.col]=L})}
 const save=(p,c)=>post({action:'save',col:c||'pac',item:p,patient:p});
 const bulk=c=>post({action:'bulk',col:c,items:X[c]});
 // estoque: converte o formato antigo (sabor e caixas de seleção) para o formato da planilha
@@ -159,9 +176,12 @@ function migrar(){let n=0;db.forEach(p=>{let mud=false,ag='';
  if(mud){const l=last(p);if(ag&&ag>l.date&&!l.proxima)l.proxima=ag;save(p)}});if(n)toast(n+' retorno(s) do formato antigo convertido(s) em consulta')}
 function load(){db=JSON.parse(LS.g('db')||'[]');Object.assign(X,JSON.parse(LS.g('x')||'{}'));norm();render();
  if(API)fetch(url()).then(r=>r.json()).then(r=>{if(r.erro)throw 0;V2=!Array.isArray(r);OK=true;
-  if(V2){db=r.pac||[];COLS.forEach(k=>{if(!(k in r))return;if((k=='cup'||k=='opt')&&!r[k].length&&X[k]&&X[k].length)bulk(k);else X[k]=r[k]});if(!('cup' in r))toast('Atualize o Apps Script para sincronizar os cupons','err')}
+  if(V2){aplicaFila(r);db=r.pac||[];COLS.forEach(k=>{if(!(k in r))return;if((k=='cup'||k=='opt')&&!r[k].length&&X[k]&&X[k].length)bulk(k);else X[k]=r[k]});if(!('cup' in r))toast('Atualize o Apps Script para sincronizar os cupons','err')}
   else{db=r;toast('Atualize o Apps Script para sincronizar tarefas, postagens, estoque e cupons','err')}
-  norm();migrar();cache();render()}).catch(()=>toast('Sem conexão com a planilha (ou chave incorreta)','err'))}
+  norm();migrar();cache();render();AVS=0;const er=r._erros||[];
+  if(er.length)toast(er.length==1?`Uma linha da planilha está com defeito e foi ignorada (aba ${er[0].aba}, linha ${er[0].linha})`:`${er.length} linhas da planilha estão com defeito e foram ignoradas (a primeira: aba ${er[0].aba}, linha ${er[0].linha})`,'err',9000);
+  if(PQ.length)flush().then(n=>{if(er.length)return;if(n>0)toast(alt(n)+' feita'+(n>1?'s':'')+' sem conexão enviada'+(n>1?'s':'')+' para a planilha ✓');else if(n<0)toast(OFF,'err')})})
+  .catch(()=>{if(!AVS){AVS=1;toast('Sem conexão com a planilha (ou chave incorreta)','err')}})}
 function cfg(){$('#m').innerHTML=`<div class="ov"><div class="md"><h2>Ajustes</h2><button type="button" class="x" aria-label="Fechar" onclick="cl()">✕</button>
  <p class="mu lead">Cole o endereço do app da Web gerado no Apps Script e a chave de acesso. Eles ficam salvos só neste aparelho.</p>
  <label for="aj_u">Endereço do app da Web</label><input id="aj_u" type="url" value="${esc(API)}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
@@ -172,7 +192,12 @@ function cfg(){$('#m').innerHTML=`<div class="ov"><div class="md"><h2>Ajustes</h
  <div class="acts sp"><span>${API?B('Desconectar','desc()','dng'):''}</span><span class="acts">${B('Cancelar','cl()')}${B('Salvar e conectar','ajSave()','pri')}</span></div></div></div>`}
 function ajSave(){const u=$('#aj_u').value.trim();if(u&&!/^https:\/\/script\.google(usercontent)?\.com\//.test(u))return toast('O endereço precisa começar com https://script.google.com/','err');
  API=u;KEY=$('#aj_k').value.trim();LS.s('api',API);LS.s('key',KEY);OK=false;cl();load();toast(API?'Conectando à planilha…':'Modo local')}
-function desc(){if(!confirm('Desconectar este aparelho da planilha? Os dados da planilha não são apagados.'))return;API='';KEY='';LS.s('api','');LS.s('key','');OK=false;V2=false;cl();render();toast('Desconectado')}
+function desc(){const n=PQ.length;$('#m').innerHTML=`<div class="ov"><div class="md"><h2>Desconectar este aparelho?</h2><button type="button" class="x" aria-label="Fechar" onclick="cfg()">✕</button>
+ <p class="mu lead">Os dados da planilha continuam guardados. A cópia dos dados que fica neste aparelho será apagada.</p>
+ ${n?`<p class="wn"><b>Atenção:</b> ${n>1?n+' alterações ainda não foram enviadas para a planilha e serão perdidas':'uma alteração ainda não foi enviada para a planilha e será perdida'}.</p>`:''}
+ <p><b>Essa ação não pode ser desfeita.</b> Quer baixar um backup antes?</p>
+ <div class="acts sp"><span>${B('Cancelar','cfg()')}</span><span class="acts">${B('Desconectar sem backup','doDesc()','dng')}${B('Baixar backup e desconectar','exp();doDesc()','pri')}</span></div></div></div>`}
+function doDesc(){API='';KEY='';OK=false;V2=false;db=[];X={tar:[],pos:[],est:[],cup:[],opt:[]};PQ=[];['api','key','db','x','pq'].forEach(k=>LS.s(k,''));cl();render();toast('Aparelho desconectado. A cópia dos dados deste aparelho foi apagada')}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({pac:db,...X},null,1)],{type:'application/json'}));a.download='backup-consultorio-'+T+'.json';a.click();toast('Backup baixado ✓')}
 function rest(file){if(!file)return;file.text().then(t=>{let j;try{j=JSON.parse(t)}catch(e){return toast('Arquivo de backup inválido','err')}
  const mg=(L,N)=>{N=Array.isArray(N)?N:[];const m=new Map(L.map(i=>[i.id,i]));N.forEach(i=>i&&i.id&&m.set(i.id,i));return[...m.values()]};
@@ -228,11 +253,12 @@ function dec(pid,cid,v){const p=P(pid),c=C(p,cid);
 const cl=()=>$('#m').innerHTML='';
 function del(pid){if(!confirm('Excluir este paciente e todo o histórico? Não dá para desfazer.'))return;db=db.filter(p=>p.id!=pid);post({action:'del',col:'pac',id:pid});cl();render()}
 function delC(pid,cid){if(!confirm('Excluir esta consulta?'))return;const p=P(pid);p.consults=p.consults.filter(c=>c.id!=cid);save(p);render();hist(pid)}
-function abrirForm(pid,cid){const p=pid?P(pid):null,ed=!p||cid;let c=cid?C(p,cid):{};
+function abrirForm(pid,cid){const p=pid?P(pid):null,ed=!p||cid,inat=p&&!cid&&p.status!='Ativo';let c=cid?C(p,cid):{};
  if(!cid&&p){const pl=last(p);c=pl.tipo=='Ciclo'&&(+pl.enc||1)<ENC&&pl.dec!='Renovar'?{tipo:'Ciclo',enc:(+pl.enc||1)+1}:pl.tipo=='Ciclo'?{tipo:'Ciclo',enc:1}:{}}
  const tps=['Avulsa','Retorno','Ciclo'].concat(c.tipo=='Plano'?['Plano']:[]),isC=c.tipo=='Ciclo';
  $('#m').innerHTML=`<div class="ov"><div class="md"><h2>${!p?'Novo paciente':cid?'Editar consulta':'Nova consulta — '+esc(p.nome)}</h2><button type="button" class="x" aria-label="Fechar" onclick="cl()">✕</button>
  ${ed?`<div class="g2"><div class="full"><label for="f1">Nome</label><input id="f1" value="${esc(p?p.nome:'')}"></div><div><label for="f2">Status do paciente</label><select id="f2">${PS.map(s=>`<option ${p&&p.status==s?'selected':''}>${s}</option>`).join('')}</select></div></div>`:''}
+ ${inat?`<label class="c" for="fr"><input type="checkbox" id="fr" checked>Reativar: o status passa de "${esc(p.status)}" para "Ativo" e os avisos voltam</label>`:''}
  <div class="g2"><div><label for="f3">Data da consulta</label><input type="date" id="f3" value="${c.date||T}" onchange="if(!$('#f5').dataset.u)$('#f5').value=this.value"></div>
  <div><label for="f4">Tipo de atendimento</label><select id="f4" onchange="$('#fe').style.display=this.value=='Ciclo'?'':'none'">${tps.map(s=>`<option value="${s}" ${c.tipo==s?'selected':''}>${TL[s]}</option>`).join('')}</select></div>
  <div id="fe" style="display:${isC?'':'none'}"><label for="f9">Encontro do ciclo</label><select id="f9">${[1,2,3].map(n=>`<option value="${n}" ${(+c.enc||1)==n?'selected':''}>${n}º encontro${n==1?' (início do ciclo)':n==ENC?' (último)':''}</option>`).join('')}</select></div>
@@ -247,6 +273,7 @@ function sv(pid,cid){const nome=$('#f1')?$('#f1').value.trim():'';if($('#f1')&&!
  if($('#f7').value&&$('#f7').value<=$('#f3').value)return toast('O retorno agendado precisa ser depois da data da consulta','err');
  let p=pid?P(pid):{id:uid(),nome,status:'Ativo',consults:[]};if(!pid)db.push(p);
  if($('#f1')){p.nome=nome;p.status=$('#f2').value}
+ if($('#fr')&&$('#fr').checked)p.status='Ativo';
  let c=cid?C(p,cid):{id:uid()};if(!cid)p.consults.push(c);
  const tipo=$('#f4').value;
  Object.assign(c,{date:$('#f3').value,tipo,enc:tipo=='Ciclo'?+$('#f9').value:'',entrega:$('#f5').value,glp:$('#f6').value,proxima:$('#f7').value,obs:$('#f8').value});
@@ -255,7 +282,7 @@ function hist(pid){const p=P(pid);if(!p)return;const cs=[...p.consults].sort((a,
  const st=(c,i)=>{if(c.id!=L.id){const nx=cs[i-1];return`<span class="b ok">Retorno registrado em ${sh(nx.date)}</span>`}
   if(p.status!='Ativo')return`<span class="b">${p.status}</span>`;
   if(cy&&cy.n>=ENC&&c.dec=='Encerrar')return'<span class="b">Ciclo encerrado</span>';
-  if(c.proxima)return`<span class="b ok">Agendado para ${br(c.proxima)}</span>`;
+  if(c.proxima)return diff(c.proxima,T)<0?`<span class="b late">Agendado para ${br(c.proxima)} · consulta não registrada</span>`:`<span class="b ok">Agendado para ${br(c.proxima)}</span>`;
   const n=diff(add(c.date,INT),T);return`<span class="b ${n<0?'late':'sched'}">${n<0?'Atrasado · agendamento pendente':'Agendamento pendente'}</span>`};
  $('#m').innerHTML=`<div class="ov"><div class="md"><h1>${esc(p.nome)}</h1><button type="button" class="x" aria-label="Fechar" onclick="cl()">✕</button><span class="b">${p.status}</span>
  <div class="acts" style="margin:14px 0 6px">${B('+ Nova consulta',`abrirForm('${pid}')`,'pri')}${L.id&&p.status=='Ativo'?B(L.proxima?'Alterar data agendada':'Marcar retorno agendado',`agd('${pid}','${L.id}')`):''}${B('Excluir paciente',`del('${pid}')`)}</div>
@@ -471,15 +498,18 @@ function vCup(){const q=key(cq),A=X.cup,L=sCup(A.filter(c=>CF[cf][1](c)&&(!q||ke
  <div class="panel cupt"><table><thead><tr><th aria-sort="${CS>0?'ascending':'descending'}"><button type="button" class="srt" onclick="cupOrd()" title="Inverter a ordem">Marca <span>${CS>0?'A→Z':'Z→A'}</span></button></th><th>Cupom do paciente</th><th>%</th><th>Cupom pessoal</th><th>%</th><th>Criado em</th><th>Validade</th><th>Status</th><th>Na página</th></tr></thead><tbody>
  ${L.map(c=>`<tr class="cl ${c.st=='Inativo'?'zero':''}" onclick="gOpen('cup','${c.id}')"><td><b>${esc(c.marca)}</b>${c.obs?`<div class="mu clamp">${esc(c.obs)}</div>`:''}</td><td class="nw"><span class="cc">${code(c.cpac)}${isC(c.cpac)?`<button type="button" class="ib" title="Copiar cupom" aria-label="Copiar cupom ${esc(c.cpac)}" onclick="event.stopPropagation();cpy('${esc(c.cpac)}')"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 5.5h7v7h-7zM10.5 5.5v-2h-7v7h2"/></svg></button>`:''}</span></td><td class="nw">${pc(c.ppac)}</td><td class="nw">${code(c.cpes)}</td><td class="nw">${pc(c.ppes)}</td><td class="mu nw">${c.cri?br(c.cri):'—'}</td><td class="mu">${esc(c.vald)||'—'}</td><td><span class="chip ${c.st=='Ativo'?'ok':c.st=='Aguardando'?'warn':''}">${c.st}</span></td>${pubCell(c)}</tr>`).join('')||'<tr><td colspan="9" class="empty">Nenhum cupom encontrado.</td></tr>'}
  </tbody></table></div><div class="mu foot">Clique no ícone ao lado do cupom do paciente para copiar e colar na mensagem. A página das pacientes mostra só as marcas com "Na página" ligado, com status Ativo e com cupom do paciente.</div>`}
-function render(){T=f(new Date());$('#nav').innerHTML=`<div class="br"><img src="${LOGO}" alt="Amanda Muzzio, nutricionista"></div>`+NV.map(([k,l])=>`<button type="button" class="nv ${view==k?'on':''}" onclick="go('${k}')" ${view==k?'aria-current="page"':''}>${svg(k)}${l}</button>`).join('')+`<div class="nf"><button type="button" class="nv" onclick="cfg()">${svg('cfg')}Ajustes</button><div class="sync ${API&&OK?'ok':''}"><i></i>${API?(OK?'Google Sheets':'conectando…'):'modo local'}</div></div>`;
+function render(){T=f(new Date());$('#nav').innerHTML=`<div class="br"><img src="${LOGO}" alt="Amanda Muzzio, nutricionista"></div>`+NV.map(([k,l])=>`<button type="button" class="nv ${view==k?'on':''}" onclick="go('${k}')" ${view==k?'aria-current="page"':''}>${svg(k)}${l}</button>`).join('')+`<div class="nf"><button type="button" class="nv" onclick="cfg()">${svg('cfg')}Ajustes</button>${syncEl()}</div>`;
  $('#v').innerHTML=({hoje:vHoje,tar:vTar,pac:vPac,pos:vPos,est:vEst,cup:vCup})[view]()}
 // ---- importação CSV de pacientes
+// uma consulta da mesma paciente na mesma data é considerada repetida e não é importada de novo
 function imp(file){if(!file)return;file.text().then(t=>{const ls=csvP(t);
- const tp=s=>/ciclo/i.test(s)?'Ciclo':/plano/i.test(s)?'Plano':/retorno/i.test(s)?'Retorno':'Avulsa';let ct=0;
- ls.slice(1).forEach(c=>{c=c.map(x=>x.trim());if(!c[0]||!dBR(c[1]))return;
+ const tp=s=>/ciclo/i.test(s)?'Ciclo':/plano/i.test(s)?'Plano':/retorno/i.test(s)?'Retorno':'Avulsa';let ct=0,dup=0;const mx=new Set();
+ ls.slice(1).forEach(c=>{c=c.map(x=>x.trim());const dt=dBR(c[1]);if(!c[0]||!dt)return;
   let p=db.find(p=>p.nome.toLowerCase()==c[0].toLowerCase());if(!p){p={id:uid(),nome:c[0],status:PS.find(s=>s.toLowerCase()==(c[6]||'').toLowerCase())||'Ativo',consults:[]};db.push(p)}
-  p.consults.push({id:uid(),date:dBR(c[1]),tipo:tp(c[2]),glp:/^s/i.test(c[3])?'Sim':'Não',entrega:dBR(c[4])||dBR(c[1]),proxima:dBR(c[5]),msg:false,chk:false,obs:''});ct++});
- db.forEach(p=>save(p));toast(ct+' consultas importadas ✓');render()})}
+  if(p.consults.some(o=>o.date==dt)){dup++;return}
+  p.consults.push({id:uid(),date:dt,tipo:tp(c[2]),glp:/^s/i.test(c[3])?'Sim':'Não',entrega:dBR(c[4])||dt,proxima:dBR(c[5]),obs:''});mx.add(p);ct++});
+ render();const m=(!ct?'Nenhuma consulta importada':ct==1?'1 consulta importada':ct+' consultas importadas')+(dup?` · ${dup==1?'1 já existia e foi ignorada':dup+' já existiam e foram ignoradas'}`:'');
+ if(!mx.size)return toast(m,dup>0);cache();Promise.all([...mx].map(p=>post({action:'save',col:'pac',item:p,patient:p},1))).then(()=>{if(!PQ.length)toast(m+' ✓')})})}
 load();
 // atualização automática: quando o dia vira (ou muda a saudação) a tela é refeita;
 // ao voltar para a aba depois de 5 minutos, os dados são buscados de novo na planilha
@@ -487,6 +517,7 @@ const marca_=()=>{const h=new Date().getHours();return f(new Date())+(h<5||h>=18
 let MK=marca_(),SAIU=0;
 const livre_=()=>!$('#m').innerHTML&&!(document.activeElement&&$('#v').contains(document.activeElement)&&/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
 setInterval(()=>{const m=marca_();if(m!=MK&&livre_()){MK=m;render()}},60000);
+addEventListener('online',()=>{if(API)load()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){SAIU=Date.now();return}
  if(SAIU&&Date.now()-SAIU>=3e5&&!$('#m').innerHTML){MK=marca_();load()}else if(marca_()!=MK&&livre_()){MK=marca_();render()}});
 </script></body></html>
